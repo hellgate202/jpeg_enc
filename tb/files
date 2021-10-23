@@ -1,0 +1,3 @@
+../src/dct_pkg.sv
+../src/dct.sv
+./tb_dct.sv

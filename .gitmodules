@@ -1,0 +1,3 @@
+[submodule "lib/axi4_lib"]
+	path = lib/axi4_lib
+	url = git@github.com:hellgate202/axi4_lib.git

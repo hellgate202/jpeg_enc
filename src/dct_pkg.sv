@@ -42,7 +42,7 @@ function bit [7 : 0][3 : 0][COEF_WIDTH - 1 : 0] gen_coefs();
   gen_coefs[3][0] = { 1'b0, COEF_FRACT_WIDTH'( int'( 2 ** COEF_FRACT_WIDTH * 0.416 ) ) };
   gen_coefs[3][1] = { 1'b1, COEF_FRACT_WIDTH'( int'( 2 ** COEF_FRACT_WIDTH * 0.098 ) ) };
   gen_coefs[3][2] = { 1'b1, COEF_FRACT_WIDTH'( int'( 2 ** COEF_FRACT_WIDTH * 0.49  ) ) };
-  gen_coefs[3][3] = { 1'b0, COEF_FRACT_WIDTH'( int'( 2 ** COEF_FRACT_WIDTH * 0.278 ) ) };
+  gen_coefs[3][3] = { 1'b1, COEF_FRACT_WIDTH'( int'( 2 ** COEF_FRACT_WIDTH * 0.278 ) ) };
   gen_coefs[4][0] = { 1'b0, COEF_FRACT_WIDTH'( int'( 2 ** COEF_FRACT_WIDTH * 0.354 ) ) };
   gen_coefs[4][1] = { 1'b1, COEF_FRACT_WIDTH'( int'( 2 ** COEF_FRACT_WIDTH * 0.354 ) ) };
   gen_coefs[4][2] = { 1'b1, COEF_FRACT_WIDTH'( int'( 2 ** COEF_FRACT_WIDTH * 0.354 ) ) };

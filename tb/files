@@ -1,3 +1,4 @@
 ../src/dct_pkg.sv
-../src/dct.sv
-./tb_dct.sv
+../lib/axi4_lib/src/interface/axi4_stream_if.sv
+../src/dct_stage_1.sv
+./tb_dct_stage_1.sv

@@ -1,5 +1,11 @@
 import dct_pkg::*;
 
+/*
+
+  This module performs 1D-DCT to incoming pixel stream
+  with 1x8 window
+
+*/
 module dct_stage_1 #(
   parameter int PX_WIDTH = 8 
 )(
@@ -9,9 +15,12 @@ module dct_stage_1 #(
   axi4_stream_if.master dct_o
 );
 
+// Size of variable before multiplication
 localparam int MULT_WIDTH        = PX_WIDTH + 2 + COEF_FRACT_WIDTH;
+// Multiplication result_width (-1 because we ommit sign in multiplication)
 localparam int MULT_RESULT_WIDTH = ( MULT_WIDTH - 1 ) * 2 + 1;
 
+// Two's complement to sign + absolute value
 function logic [PX_WIDTH + 1 : 0] tc_to_sa( logic [PX_WIDTH + 1 : 0] tc );
 
   if( tc[PX_WIDTH + 1] )
@@ -24,6 +33,7 @@ function logic [PX_WIDTH + 1 : 0] tc_to_sa( logic [PX_WIDTH + 1 : 0] tc );
 
 endfunction
 
+// Sign + absolute value to two's compement
 function logic [MULT_WIDTH - 1 : 0] sa_to_tc( logic [MULT_WIDTH - 1 : 0] sa );
 
   if( sa[MULT_WIDTH - 1] && sa[MULT_WIDTH - 2 : 0] )
@@ -83,6 +93,8 @@ logic [MULT_WIDTH + 1 : 0]         dct;
 
 assign video_i.tready = 1'b1;
 
+// Current pixel value - 128 is locked here by 1x8 pack
+// Then switch to another lock
 always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
     px_lock <= ( PX_WIDTH * 2 )'( 0 );
@@ -91,6 +103,7 @@ always_ff @( posedge clk_i, posedge rst_i )
       px_lock[cur_lock] <= { { 1'b0, video_i.tdata[PX_WIDTH - 1 : 0] } - 
                              ( PX_WIDTH + 1 )'( ( 2 ** PX_WIDTH ) / 2 ), px_lock[cur_lock][7 : 1] };
 
+// Changes every 8 pixels
 always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
     cur_lock <= 1'b0;
@@ -105,6 +118,7 @@ always_ff @( posedge clk_i, posedge rst_i )
     if( video_i.tvalid && video_i.tready )
       px_cnt <= px_cnt + 1'b1;
 
+// Addition and subtraction of pixel values from buffer that is not active
 always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
     begin
@@ -119,6 +133,8 @@ always_ff @( posedge clk_i, posedge rst_i )
     end
   else
     begin
+      // Values are in two's complement so we do sign extension because
+      // overflows are likely to be occured
       px_0_p_px_7 <= { px_lock[!cur_lock][0][PX_WIDTH], px_lock[!cur_lock][0] } + 
                      { px_lock[!cur_lock][7][PX_WIDTH], px_lock[!cur_lock][7] };
       px_1_p_px_6 <= { px_lock[!cur_lock][1][PX_WIDTH], px_lock[!cur_lock][1] } + 
@@ -137,6 +153,7 @@ always_ff @( posedge clk_i, posedge rst_i )
                      { px_lock[!cur_lock][4][PX_WIDTH], px_lock[!cur_lock][4] };
     end
 
+// Transforming to signed absolute value before multiplication
 assign px_0_p_px_7_sa = tc_to_sa( px_0_p_px_7 );
 assign px_1_p_px_6_sa = tc_to_sa( px_1_p_px_6 );
 assign px_2_p_px_5_sa = tc_to_sa( px_2_p_px_5 );
@@ -146,6 +163,7 @@ assign px_1_m_px_6_sa = tc_to_sa( px_1_m_px_6 );
 assign px_2_m_px_5_sa = tc_to_sa( px_2_m_px_5 );
 assign px_3_m_px_4_sa = tc_to_sa( px_3_m_px_4 );
 
+// Delayed value of pixel counter to decide which DCT coefficient to calculate
 always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
     px_cnt_d <= 15'd0;
@@ -156,6 +174,12 @@ always_ff @( posedge clk_i, posedge rst_i )
         px_cnt_d[i] <= px_cnt_d[i - 1];
     end
   
+// TODO: get COEFS values from ROM instead of parameters
+// because parameters will generate LUTs
+// We select here which diff/sum value and which coefficient we will be using
+// There are 4 blocks of these down below
+// Each block is for respective coefficient position inside the matrix
+// case value goes through DCT coefficient related to current calculations
 always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
     begin
@@ -356,6 +380,8 @@ always_ff @( posedge clk_i, posedge rst_i )
         end
     endcase
 
+// Performing multiplications and restoring sign
+// Only 4 multipliers are needed
 always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
     begin
@@ -376,16 +402,19 @@ always_ff @( posedge clk_i, posedge rst_i )
       mult_3_result[MULT_RESULT_WIDTH - 1] <= mult_3_px[MULT_WIDTH - 1] ^ mult_3_coef[MULT_WIDTH - 1];
     end
 
+// Multiplication result is too big, so we cut it in the middle
 assign cut_0_result = { mult_0_result[MULT_RESULT_WIDTH - 1], mult_0_result[MULT_RESULT_WIDTH - 2 - PX_WIDTH - 1 : COEF_FRACT_WIDTH] };
 assign cut_1_result = { mult_1_result[MULT_RESULT_WIDTH - 1], mult_1_result[MULT_RESULT_WIDTH - 2 - PX_WIDTH - 1 : COEF_FRACT_WIDTH] };
 assign cut_2_result = { mult_2_result[MULT_RESULT_WIDTH - 1], mult_2_result[MULT_RESULT_WIDTH - 2 - PX_WIDTH - 1 : COEF_FRACT_WIDTH] };
 assign cut_3_result = { mult_3_result[MULT_RESULT_WIDTH - 1], mult_3_result[MULT_RESULT_WIDTH - 2 - PX_WIDTH - 1 : COEF_FRACT_WIDTH] };
 
+// All next calculations will be in two's complement
 assign cut_0_tc = sa_to_tc( cut_0_result );
 assign cut_1_tc = sa_to_tc( cut_1_result );
 assign cut_2_tc = sa_to_tc( cut_2_result );
 assign cut_3_tc = sa_to_tc( cut_3_result );
 
+// To get DCT value we need to sum all products
 always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
     add_stage <= ( ( MULT_WIDTH + 1 ) * 2 )'( 0 );
@@ -406,6 +435,7 @@ always_ff @( posedge clk_i, posedge rst_i )
 
 //synthesis translate_off
 
+// To see DCT result as fixed point inside simulation
 logic [MULT_WIDTH + 1 : 0] dct_sa;
 assign dct_sa = dct[MULT_WIDTH + 1] ? { dct[MULT_WIDTH + 1], ~dct[MULT_WIDTH : 0] + 1'b1 } : dct;
 

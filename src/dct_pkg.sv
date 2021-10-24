@@ -83,7 +83,7 @@ function bit [7 : 0][7 : 0][3 : 0][COEF_WIDTH - 1 : 0] gen_q_coefs();
       gen_q_coefs[i][3][0] = { 1'b0, COEF_FRACT_WIDTH'( int'( 2 ** COEF_FRACT_WIDTH * 0.416 / Q_MAT_HW[3][i] ) ) };
       gen_q_coefs[i][3][1] = { 1'b1, COEF_FRACT_WIDTH'( int'( 2 ** COEF_FRACT_WIDTH * 0.098 / Q_MAT_HW[3][i] ) ) };
       gen_q_coefs[i][3][2] = { 1'b1, COEF_FRACT_WIDTH'( int'( 2 ** COEF_FRACT_WIDTH * 0.49  / Q_MAT_HW[3][i] ) ) };
-      gen_q_coefs[i][3][3] = { 1'b0, COEF_FRACT_WIDTH'( int'( 2 ** COEF_FRACT_WIDTH * 0.278 / Q_MAT_HW[3][i] ) ) };
+      gen_q_coefs[i][3][3] = { 1'b1, COEF_FRACT_WIDTH'( int'( 2 ** COEF_FRACT_WIDTH * 0.278 / Q_MAT_HW[3][i] ) ) };
       gen_q_coefs[i][4][0] = { 1'b0, COEF_FRACT_WIDTH'( int'( 2 ** COEF_FRACT_WIDTH * 0.354 / Q_MAT_HW[4][i] ) ) };
       gen_q_coefs[i][4][1] = { 1'b1, COEF_FRACT_WIDTH'( int'( 2 ** COEF_FRACT_WIDTH * 0.354 / Q_MAT_HW[4][i] ) ) };
       gen_q_coefs[i][4][2] = { 1'b1, COEF_FRACT_WIDTH'( int'( 2 ** COEF_FRACT_WIDTH * 0.354 / Q_MAT_HW[4][i] ) ) };

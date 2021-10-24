@@ -5,6 +5,24 @@
 
   For now incoming lines must be a multiple of 8
 
+  How is DCT optimized here:
+
+  |F[0]|   | c4  c4  c4  c4 |   | f[0] + f[7] |
+  |F[2]| = | c2  c6 -c6  c2 | * | f[1] + f[6] |
+  |F[4]|   | c4 -c4 -c4  c4 |   | f[2] + f[5] |
+  |F[6]|   | c6 -c2  c2 -c6 |   | f[3] + f[4] |
+
+  |F[1]|   | c1  c3  c5  c7 |   | f[0] - f[7] |
+  |F[3]| = | c3 -c7 -c1 -c5 | * | f[1] - f[6] |
+  |F[5]|   | c5 -c1  c7  c3 |   | f[2] - f[5] |
+  |F[7]|   | c7 -c5  c3 -c1 |   | f[3] - f[4] |
+
+  Where: 
+
+  F is DCT vector
+  ck is 0.5 * cos( k * pi / 16 )
+  f is pixel values vector
+
 */
 
 import dct_pkg::*;
@@ -14,7 +32,9 @@ module dct_stage_1 #(
 )(
   input                 clk_i,
   input                 rst_i,
+  // Integer unsigned pixel value
   axi4_stream_if.slave  video_i,
+  // Fixed point signed DCT value
   axi4_stream_if.master dct_o
 );
 
@@ -28,7 +48,7 @@ localparam int DCT_TDATA_WIDTH = ( MULT_WIDTH + 2 ) % 8 ?
                                  ( MULT_WIDTH + 2 );
 
 // Two's complement to sign + absolute value
-function logic [PX_WIDTH + 1 : 0] tc_to_sa( logic [PX_WIDTH + 1 : 0] tc );
+function logic [PX_WIDTH + 1 : 0] tc_to_sa( input logic [PX_WIDTH + 1 : 0] tc );
 
   if( tc[PX_WIDTH + 1] )
     begin
@@ -41,7 +61,7 @@ function logic [PX_WIDTH + 1 : 0] tc_to_sa( logic [PX_WIDTH + 1 : 0] tc );
 endfunction
 
 // Sign + absolute value to two's compement
-function logic [MULT_WIDTH - 1 : 0] sa_to_tc( logic [MULT_WIDTH - 1 : 0] sa );
+function logic [MULT_WIDTH - 1 : 0] sa_to_tc( input logic [MULT_WIDTH - 1 : 0] sa );
 
   if( sa[MULT_WIDTH - 1] && sa[MULT_WIDTH - 2 : 0] )
     begin
@@ -123,6 +143,7 @@ always_ff @( posedge clk_i, posedge rst_i )
       px_lock[cur_wr_lock] <= { { 1'b0, video_i.tdata[PX_WIDTH - 1 : 0] } - 
                               ( PX_WIDTH + 1 )'( ( 2 ** PX_WIDTH ) / 2 ), px_lock[cur_wr_lock][7 : 1] };
 
+// Tlast and Tuser will be transfered as 1x8 pixel packs
 always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
     begin
@@ -143,6 +164,7 @@ always_ff @( posedge clk_i, posedge rst_i )
           end
       end
 
+// Wr lock is where 1x8 pack is being written
 always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
     cur_wr_lock <= 1'b0;
@@ -150,6 +172,7 @@ always_ff @( posedge clk_i, posedge rst_i )
     if( px_cnt == 3'd7 && video_i.tvalid && video_i.tready )
       cur_wr_lock <= !cur_wr_lock;
 
+// Rd lock is where DCT multiplication takes data
 always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
     cur_rd_lock <= 1'b0;
@@ -157,6 +180,7 @@ always_ff @( posedge clk_i, posedge rst_i )
     if( lock_full[cur_rd_lock] && mult_ready )
       cur_rd_lock <= !cur_rd_lock;
 
+// Pointer int current lock
 always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
     px_cnt <= 3'd0;
@@ -164,6 +188,7 @@ always_ff @( posedge clk_i, posedge rst_i )
     if( video_i.tvalid && video_i.tready )
       px_cnt <= px_cnt + 1'b1;
 
+// When DSP blocks are ready and there is a full lock
 assign free_lock = lock_full[cur_rd_lock] && mult_ready;
 
 always_ff @( posedge clk_i, posedge rst_i )
@@ -225,21 +250,21 @@ always_ff @( posedge clk_i, posedge rst_i )
     mult_valid_pipe <= 5'd0;
   else
     if( data_path_ready )
-      mult_valid_pipe <= { mult_valid_pipe[4 : 0], dct_sel_run };
+      mult_valid_pipe <= { mult_valid_pipe[2 : 0], dct_sel_run };
 
 always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
     mult_tuser_pipe <= 5'd0;
   else
     if( data_path_ready )
-      mult_tuser_pipe <= { mult_tuser_pipe[4 : 0], cur_dct == 3'd0 && was_tuser };
+      mult_tuser_pipe <= { mult_tuser_pipe[2 : 0], cur_dct == 3'd0 && was_tuser };
 
 always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
     mult_tlast_pipe <= 5'd0;
   else
     if( data_path_ready )
-      mult_tlast_pipe <= { mult_tlast_pipe[4 : 0], cur_dct == 3'd7 && was_tlast };
+      mult_tlast_pipe <= { mult_tlast_pipe[2 : 0], cur_dct == 3'd7 && was_tlast };
 
 always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )

@@ -1,3 +1,9 @@
 [submodule "lib/axi4_lib"]
 	path = lib/axi4_lib
 	url = git@github.com:hellgate202/axi4_lib.git
+[submodule "lib/fifo_lib"]
+	path = lib/fifo_lib
+	url = git@github.com:hellgate202/fifo_lib.git
+[submodule "ip/dual_port_ram"]
+	path = ip/dual_port_ram
+	url = git@github.com:hellgate202/dual_port_ram.git

@@ -121,18 +121,20 @@ always_ff @( posedge clk_i, posedge rst_i )
       tlast_lock <= 2'd0;
     end
   else
-    if( video_i.tvalid && video_i.tready )
-      begin
-        if( video_i.tlast )
-          tlast_lock[cur_wr_lock] <= 1'b1;
-        if( video_i.tuser )
-          tuser_lock[cur_wr_lock] <= 1'b1;
-        if( free_lock )
-          begin
-            tlast_lock[cur_rd_lock] <= 1'b0;
-            tuser_lock[cur_rd_lock] <= 1'b0;
-          end
-      end
+    begin
+      if( video_i.tvalid && video_i.tready )
+        begin
+          if( video_i.tlast )
+            tlast_lock[cur_wr_lock] <= 1'b1;
+          if( video_i.tuser )
+            tuser_lock[cur_wr_lock] <= 1'b1;
+        end
+      if( free_lock )
+        begin
+          tlast_lock[cur_rd_lock] <= 1'b0;
+          tuser_lock[cur_rd_lock] <= 1'b0;
+        end
+    end
 
 // Wr lock is where 1x8 pack is being written
 always_ff @( posedge clk_i, posedge rst_i )

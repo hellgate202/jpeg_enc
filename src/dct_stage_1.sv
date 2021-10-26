@@ -75,9 +75,7 @@ function logic [MULT_WIDTH - 1 : 0] sa_to_tc( input logic [MULT_WIDTH - 1 : 0] s
     end
 endfunction
 
-logic [1 : 0][7 : 0][PX_WIDTH : 0]       px_lock;
-logic                                    cur_wr_lock;
-logic                                    cur_rd_lock;
+logic [7 : 0][PX_WIDTH : 0]              px_lock;
 logic [2 : 0]                            px_cnt;
 logic [2 : 0]                            cur_dct;
 logic                                    dct_sel_run;
@@ -90,18 +88,18 @@ logic [3 : 0][MULT_WIDTH - 1 : 0]        cut_tc;
 logic [1 : 0][MULT_WIDTH : 0]            add_stage;
 logic [MULT_WIDTH + 1 : 0]               dct;
 logic                                    free_lock;
-logic [1 : 0]                            lock_full;
+logic                                    lock_full;
 logic                                    mult_ready;
 logic                                    data_path_ready;
 logic [3 : 0]                            mult_valid_pipe;
 logic [3 : 0]                            mult_tlast_pipe;
 logic [3 : 0]                            mult_tuser_pipe;
-logic [1 : 0]                            tuser_lock;
-logic [1 : 0]                            tlast_lock;
+logic                                    tuser_lock;
+logic                                    tlast_lock;
 logic                                    was_tuser;
 logic                                    was_tlast;
 
-assign video_i.tready = !lock_full[cur_wr_lock];
+assign video_i.tready = !lock_full || free_lock;
 
 // Current pixel value - 128 is locked here by 1x8 pack
 // Then switch to another lock
@@ -110,47 +108,30 @@ always_ff @( posedge clk_i, posedge rst_i )
     px_lock <= ( PX_WIDTH * 2 )'( 0 );
   else
     if( video_i.tvalid && video_i.tready )
-      px_lock[cur_wr_lock] <= { { 1'b0, video_i.tdata[PX_WIDTH - 1 : 0] } - 
-                              ( PX_WIDTH + 1 )'( ( 2 ** PX_WIDTH ) / 2 ), px_lock[cur_wr_lock][7 : 1] };
+      px_lock <= { { 1'b0, video_i.tdata[PX_WIDTH - 1 : 0] } - 
+                 ( PX_WIDTH + 1 )'( ( 2 ** PX_WIDTH ) / 2 ), px_lock[7 : 1] };
 
 // Tlast and Tuser will be transfered as 1x8 pixel packs
 always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
     begin
-      tuser_lock <= 2'd0;
-      tlast_lock <= 2'd0;
+      tuser_lock <= 1'd0;
+      tlast_lock <= 1'd0;
     end
   else
-    begin
+    if( free_lock )
+      begin
+        tlast_lock <= 1'b0;
+        tuser_lock <= 1'b0;
+      end
+    else
       if( video_i.tvalid && video_i.tready )
         begin
           if( video_i.tlast )
-            tlast_lock[cur_wr_lock] <= 1'b1;
+            tlast_lock <= 1'b1;
           if( video_i.tuser )
-            tuser_lock[cur_wr_lock] <= 1'b1;
+            tuser_lock <= 1'b1;
         end
-      if( free_lock )
-        begin
-          tlast_lock[cur_rd_lock] <= 1'b0;
-          tuser_lock[cur_rd_lock] <= 1'b0;
-        end
-    end
-
-// Wr lock is where 1x8 pack is being written
-always_ff @( posedge clk_i, posedge rst_i )
-  if( rst_i )
-    cur_wr_lock <= 1'b0;
-  else
-    if( px_cnt == 3'd7 && video_i.tvalid && video_i.tready )
-      cur_wr_lock <= !cur_wr_lock;
-
-// Rd lock is where DCT multiplication takes data
-always_ff @( posedge clk_i, posedge rst_i )
-  if( rst_i )
-    cur_rd_lock <= 1'b0;
-  else
-    if( lock_full[cur_rd_lock] && mult_ready )
-      cur_rd_lock <= !cur_rd_lock;
 
 // Pointer int current lock
 always_ff @( posedge clk_i, posedge rst_i )
@@ -161,17 +142,18 @@ always_ff @( posedge clk_i, posedge rst_i )
       px_cnt <= px_cnt + 1'b1;
 
 // When DSP blocks are ready and there is a full lock
-assign free_lock = lock_full[cur_rd_lock] && mult_ready;
+assign free_lock = lock_full && mult_ready;
 
 always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
-    lock_full <= 2'd0;
+    lock_full <= 1'd0;
   else
     begin
       if( free_lock )
-        lock_full[cur_rd_lock] <= 1'b0;
-      if( px_cnt == 3'd7 && video_i.tvalid && video_i.tready )
-        lock_full[cur_wr_lock] <= 1'b1;
+        lock_full <= 1'b0;
+      else
+        if( px_cnt == 3'd7 && video_i.tvalid && video_i.tready )
+          lock_full <= 1'b1;
     end
 
 // Addition and subtraction of pixel values from buffer that is not active

@@ -178,12 +178,12 @@ always_comb
   begin
     for( int i = 0; i < LINES_TO_OUTPUT; i++ )
       if( !cur_half )
-        post_buf_tready[i] = parallel_video_o.tready && read_in_progress;
+        post_buf_tready[i] = parallel_video_o.tready && read_in_progress && !buf_empty[LINES_TO_OUTPUT - 1];
       else
         post_buf_tready[i] = 1'b0;
     for( int i = LINES_TO_OUTPUT; i < BUF_AMOUNT; i++ )
       if( cur_half )
-        post_buf_tready[i] = parallel_video_o.tready && read_in_progress;
+        post_buf_tready[i] = parallel_video_o.tready && read_in_progress && !buf_empty[BUF_AMOUNT - 1];
       else
         post_buf_tready[i] = 1'b0;
   end

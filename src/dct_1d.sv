@@ -27,7 +27,7 @@
 
 import dct_pkg::*;
 
-module dct_stage_1 #(
+module dct_1d #(
   parameter int PX_WIDTH = 8 
 )(
   input                 clk_i,
@@ -75,8 +75,7 @@ function logic [MULT_WIDTH - 1 : 0] sa_to_tc( input logic [MULT_WIDTH - 1 : 0] s
     end
 endfunction
 
-logic [7 : 0][PX_WIDTH : 0]              px_lock;
-logic [2 : 0]                            px_cnt;
+logic [7 : 0][PX_WIDTH : 0]              px_unpack;
 logic [2 : 0]                            cur_dct;
 logic                                    dct_sel_run;
 logic [7 : 0][PX_WIDTH + 1 : 0]          px_delta;
@@ -87,89 +86,32 @@ logic [3 : 0][MULT_RESULT_WIDTH - 1 : 0] mult_result;
 logic [3 : 0][MULT_WIDTH - 1 : 0]        cut_tc;
 logic [1 : 0][MULT_WIDTH : 0]            add_stage;
 logic [MULT_WIDTH + 1 : 0]               dct;
-logic                                    free_lock;
-logic                                    lock_full;
 logic                                    mult_ready;
 logic                                    data_path_ready;
 logic [3 : 0]                            mult_valid_pipe;
 logic [3 : 0]                            mult_tlast_pipe;
 logic [3 : 0]                            mult_tuser_pipe;
-logic                                    tuser_lock;
-logic                                    tlast_lock;
 logic                                    was_tuser;
 logic                                    was_tlast;
 
-assign video_i.tready = !lock_full || free_lock;
+assign video_i.tready = mult_ready;
 
-// Current pixel value - 128 is locked here by 1x8 pack
-// Then switch to another lock
-always_ff @( posedge clk_i, posedge rst_i )
-  if( rst_i )
-    px_lock <= ( PX_WIDTH * 2 )'( 0 );
-  else
-    if( video_i.tvalid && video_i.tready )
-      px_lock <= { { 1'b0, video_i.tdata[PX_WIDTH - 1 : 0] } - 
-                 ( PX_WIDTH + 1 )'( ( 2 ** PX_WIDTH ) / 2 ), px_lock[7 : 1] };
-
-// Tlast and Tuser will be transfered as 1x8 pixel packs
-always_ff @( posedge clk_i, posedge rst_i )
-  if( rst_i )
-    begin
-      tuser_lock <= 1'd0;
-      tlast_lock <= 1'd0;
-    end
-  else
-    if( free_lock )
-      begin
-        tlast_lock <= 1'b0;
-        tuser_lock <= 1'b0;
-      end
-    else
-      if( video_i.tvalid && video_i.tready )
-        begin
-          if( video_i.tlast )
-            tlast_lock <= 1'b1;
-          if( video_i.tuser )
-            tuser_lock <= 1'b1;
-        end
-
-// Pointer int current lock
-always_ff @( posedge clk_i, posedge rst_i )
-  if( rst_i )
-    px_cnt <= 3'd0;
-  else
-    if( video_i.tvalid && video_i.tready )
-      px_cnt <= px_cnt + 1'b1;
-
-// When DSP blocks are ready and there is a full lock
-assign free_lock = lock_full && mult_ready;
-
-always_ff @( posedge clk_i, posedge rst_i )
-  if( rst_i )
-    lock_full <= 1'd0;
-  else
-    begin
-      if( free_lock )
-        lock_full <= 1'b0;
-      else
-        if( px_cnt == 3'd7 && video_i.tvalid && video_i.tready )
-          lock_full <= 1'b1;
-    end
+assign px_unpack = video_i.tdata;
 
 // Addition and subtraction of pixel values from buffer that is not active
 always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
     px_delta    <= ( ( PX_WIDTH + 2 ) * 8 )'( 0 );
   else
-    if( free_lock )
+    if( mult_ready )
       // Values are in two's complement so we do sign extension because
       // overflows are likely to be occured
       for( int i = 0; i < 4; i++ )
         begin
-          px_delta[i * 2]     <= { px_lock[i][PX_WIDTH], px_lock[i] } +
-                                 { px_lock[7 - i][PX_WIDTH], px_lock[7 - i] };
-          px_delta[i * 2 + 1] <= { px_lock[i][PX_WIDTH], px_lock[i] } -
-                                 { px_lock[7 - i][PX_WIDTH], px_lock[7 - i] };
+          px_delta[i * 2]     <= { px_unpack[i][PX_WIDTH], px_unpack[i] } +
+                                 { px_unpack[7 - i][PX_WIDTH], px_unpack[7 - i] };
+          px_delta[i * 2 + 1] <= { px_unpack[i][PX_WIDTH], px_unpack[i] } -
+                                 { px_unpack[7 - i][PX_WIDTH], px_unpack[7 - i] };
         end
 
 always_ff @( posedge clk_i, posedge rst_i )
@@ -179,10 +121,10 @@ always_ff @( posedge clk_i, posedge rst_i )
       was_tlast <= 1'b0;
     end
   else
-    if( free_lock )
+    if( mult_ready )
       begin
-        was_tuser <= tuser_lock;
-        was_tlast <= tlast_lock;
+        was_tuser <= video_i.tuser;
+        was_tlast <= video_i.tlast;
       end
     else
       if( data_path_ready )
@@ -228,7 +170,7 @@ always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
     dct_sel_run <= 1'b0;
   else
-    if( free_lock )
+    if( mult_ready && video_i.tvalid )
       dct_sel_run <= 1'b1;
     else
       if( cur_dct == 3'd7 && data_path_ready ) 

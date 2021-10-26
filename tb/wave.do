@@ -16,8 +16,6 @@ add wave -noupdate -divider {1D DCT}
 add wave -noupdate /tb_dct/dct_stage_1_inst/clk_i
 add wave -noupdate /tb_dct/dct_stage_1_inst/rst_i
 add wave -noupdate /tb_dct/dct_stage_1_inst/px_lock
-add wave -noupdate /tb_dct/dct_stage_1_inst/cur_wr_lock
-add wave -noupdate /tb_dct/dct_stage_1_inst/cur_rd_lock
 add wave -noupdate /tb_dct/dct_stage_1_inst/px_cnt
 add wave -noupdate /tb_dct/dct_stage_1_inst/cur_dct
 add wave -noupdate /tb_dct/dct_stage_1_inst/dct_sel_run
@@ -98,4 +96,4 @@ configure wave -griddelta 40
 configure wave -timeline 0
 configure wave -timelineunits ns
 update
-WaveRestoreZoom {28250015 ps} {28341255 ps}
+WaveRestoreZoom {0 ps} {1289825250 ps}

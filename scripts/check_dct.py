@@ -35,11 +35,15 @@ for i in range( len( pixels_np ) ):
 dct_array = np.reshape( dct_array, px_amount )
 
 packed_dct_array = np.zeros( ( pack_8_amounts, 8 ) )
+dct_2d_array = np.zeros( ( pack_8_amounts, 8 ) )
 
 for i in range( int( len( dct_array ) / 8 ) ):
   for j in range( 8 ):
     packed_dct_array[i][j] = dct_array[( ( int( i / 8 ) * 8 ) % width) + ( j + int( i / width ) * 8 ) * width + int( i % 8 )]
 
-packed_dct_array = np.reshape( packed_dct_array, px_amount );
+for i in range( len( packed_dct_array ) ):
+  dct_2d_array[i] = dct( packed_dct_array[i], type=2, norm="ortho" )
 
-np.savetxt( '../tb/ref.hex', packed_dct_array, delimiter='\n', fmt='%1.3f')
+dct_2d_array = np.reshape( dct_2d_array, px_amount );
+
+np.savetxt( '../tb/ref.hex', dct_2d_array, delimiter='\n', fmt='%1.3f')

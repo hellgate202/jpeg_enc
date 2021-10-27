@@ -28,7 +28,9 @@
 import dct_pkg::*;
 
 module dct_1d #(
-  parameter int PX_WIDTH = 8 
+  parameter int PX_WIDTH          = 8,
+  parameter int FIXED_POINT_INPUT = 0,
+  parameter int QUANTINIZATION    = 0 
 )(
   input                 clk_i,
   input                 rst_i,
@@ -39,13 +41,13 @@ module dct_1d #(
 );
 
 // Size of variable before multiplication
-localparam int MULT_WIDTH        = PX_WIDTH + 1 + COEF_FRACT_WIDTH;
+localparam int MULT_WIDTH        = FIXED_POINT_INPUT ? PX_WIDTH + 1 : PX_WIDTH + 1 + COEF_FRACT_WIDTH;
 // Multiplication result_width (-1 because we ommit sign in multiplication)
 localparam int MULT_RESULT_WIDTH = ( MULT_WIDTH - 1 ) * 2 + 1;
-
-localparam int DCT_TDATA_WIDTH = ( MULT_WIDTH + 2 ) % 8 ?
-                                 ( ( MULT_WIDTH + 2 ) / 8 + 1 ) * 8 :
-                                 ( MULT_WIDTH + 2 );
+localparam int PX_INT_WIDTH      = FIXED_POINT_INPUT ? PX_WIDTH - COEF_FRACT_WIDTH : PX_WIDTH;
+localparam int DCT_TDATA_WIDTH   = ( MULT_WIDTH + 2 ) % 8 ?
+                                   ( ( MULT_WIDTH + 2 ) / 8 + 1 ) * 8 :
+                                   ( MULT_WIDTH + 2 );
 
 // Two's complement to sign + absolute value
 function logic [PX_WIDTH : 0] tc_to_sa( input logic [PX_WIDTH + 1 : 0] tc );
@@ -196,8 +198,11 @@ always_ff @( posedge clk_i, posedge rst_i )
         if( cur_dct == 3'( i ) )
           for( int j = 0; j < 4; j++ )
             begin
-              mult_px[j]   <= { px_delta_sa[j * 2 + i % 2], COEF_FRACT_WIDTH'( 0 ) };
-              mult_coef[j] <= { COEFS[i][j][COEF_FRACT_WIDTH], ( PX_WIDTH )'( 0 ), COEFS[i][j][COEF_FRACT_WIDTH - 1 : 0] };
+              if( FIXED_POINT_INPUT )
+                mult_px[j] <= px_delta_sa[j * 2 + i % 2];
+              else
+                mult_px[j]   <= { px_delta_sa[j * 2 + i % 2], COEF_FRACT_WIDTH'( 0 ) };
+              mult_coef[j] <= { COEFS[i][j][COEF_FRACT_WIDTH], ( PX_INT_WIDTH )'( 0 ), COEFS[i][j][COEF_FRACT_WIDTH - 1 : 0] };
             end
 
 // Performing multiplications and restoring sign
@@ -218,7 +223,7 @@ always_ff @( posedge clk_i, posedge rst_i )
 always_comb
   for( int i = 0; i < 4; i++ )
     cut_tc[i] = sa_to_tc( { mult_result[i][MULT_RESULT_WIDTH - 1], 
-                            mult_result[i][MULT_RESULT_WIDTH - PX_WIDTH - 2 : COEF_FRACT_WIDTH] } );
+                            mult_result[i][MULT_RESULT_WIDTH - PX_INT_WIDTH - 2 : COEF_FRACT_WIDTH] } );
 
 // To get DCT value we need to sum all products
 always_ff @( posedge clk_i, posedge rst_i )

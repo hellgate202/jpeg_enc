@@ -43,8 +43,8 @@ add wave -noupdate -radix hexadecimal /tb_dct/prepared_video/tdest
 add wave -noupdate -radix hexadecimal /tb_dct/prepared_video/tuser
 add wave -noupdate -radix hexadecimal /tb_dct/dct_inst/clk_i
 add wave -noupdate -radix hexadecimal /tb_dct/dct_inst/rst_i
-add wave -noupdate -radix hexadecimal -childformat {{{/tb_dct/dct_inst/px_unpack[7]} -radix hexadecimal} {{/tb_dct/dct_inst/px_unpack[6]} -radix hexadecimal} {{/tb_dct/dct_inst/px_unpack[5]} -radix hexadecimal} {{/tb_dct/dct_inst/px_unpack[4]} -radix hexadecimal} {{/tb_dct/dct_inst/px_unpack[3]} -radix hexadecimal} {{/tb_dct/dct_inst/px_unpack[2]} -radix hexadecimal} {{/tb_dct/dct_inst/px_unpack[1]} -radix hexadecimal} {{/tb_dct/dct_inst/px_unpack[0]} -radix hexadecimal}} -expand -subitemconfig {{/tb_dct/dct_inst/px_unpack[7]} {-height 16 -radix hexadecimal} {/tb_dct/dct_inst/px_unpack[6]} {-height 16 -radix hexadecimal} {/tb_dct/dct_inst/px_unpack[5]} {-height 16 -radix hexadecimal} {/tb_dct/dct_inst/px_unpack[4]} {-height 16 -radix hexadecimal} {/tb_dct/dct_inst/px_unpack[3]} {-height 16 -radix hexadecimal} {/tb_dct/dct_inst/px_unpack[2]} {-height 16 -radix hexadecimal} {/tb_dct/dct_inst/px_unpack[1]} {-height 16 -radix hexadecimal} {/tb_dct/dct_inst/px_unpack[0]} {-height 16 -radix hexadecimal}} /tb_dct/dct_inst/px_unpack
-add wave -noupdate -radix hexadecimal -childformat {{{/tb_dct/dct_inst/px_delta[7]} -radix hexadecimal} {{/tb_dct/dct_inst/px_delta[6]} -radix hexadecimal} {{/tb_dct/dct_inst/px_delta[5]} -radix hexadecimal} {{/tb_dct/dct_inst/px_delta[4]} -radix hexadecimal} {{/tb_dct/dct_inst/px_delta[3]} -radix hexadecimal} {{/tb_dct/dct_inst/px_delta[2]} -radix hexadecimal} {{/tb_dct/dct_inst/px_delta[1]} -radix hexadecimal} {{/tb_dct/dct_inst/px_delta[0]} -radix hexadecimal}} -expand -subitemconfig {{/tb_dct/dct_inst/px_delta[7]} {-height 16 -radix hexadecimal} {/tb_dct/dct_inst/px_delta[6]} {-height 16 -radix hexadecimal} {/tb_dct/dct_inst/px_delta[5]} {-height 16 -radix hexadecimal} {/tb_dct/dct_inst/px_delta[4]} {-height 16 -radix hexadecimal} {/tb_dct/dct_inst/px_delta[3]} {-height 16 -radix hexadecimal} {/tb_dct/dct_inst/px_delta[2]} {-height 16 -radix hexadecimal} {/tb_dct/dct_inst/px_delta[1]} {-height 16 -radix hexadecimal} {/tb_dct/dct_inst/px_delta[0]} {-height 16 -radix hexadecimal}} /tb_dct/dct_inst/px_delta
+add wave -noupdate -radix hexadecimal -childformat {{{/tb_dct/dct_inst/px_unpack[7]} -radix hexadecimal} {{/tb_dct/dct_inst/px_unpack[6]} -radix hexadecimal} {{/tb_dct/dct_inst/px_unpack[5]} -radix hexadecimal} {{/tb_dct/dct_inst/px_unpack[4]} -radix hexadecimal} {{/tb_dct/dct_inst/px_unpack[3]} -radix hexadecimal} {{/tb_dct/dct_inst/px_unpack[2]} -radix hexadecimal} {{/tb_dct/dct_inst/px_unpack[1]} -radix hexadecimal} {{/tb_dct/dct_inst/px_unpack[0]} -radix hexadecimal}} -expand -subitemconfig {{/tb_dct/dct_inst/px_unpack[7]} {-height 30 -radix hexadecimal} {/tb_dct/dct_inst/px_unpack[6]} {-height 30 -radix hexadecimal} {/tb_dct/dct_inst/px_unpack[5]} {-height 30 -radix hexadecimal} {/tb_dct/dct_inst/px_unpack[4]} {-height 30 -radix hexadecimal} {/tb_dct/dct_inst/px_unpack[3]} {-height 30 -radix hexadecimal} {/tb_dct/dct_inst/px_unpack[2]} {-height 30 -radix hexadecimal} {/tb_dct/dct_inst/px_unpack[1]} {-height 30 -radix hexadecimal} {/tb_dct/dct_inst/px_unpack[0]} {-height 30 -radix hexadecimal}} /tb_dct/dct_inst/px_unpack
+add wave -noupdate -radix hexadecimal -childformat {{{/tb_dct/dct_inst/px_delta[7]} -radix hexadecimal} {{/tb_dct/dct_inst/px_delta[6]} -radix hexadecimal} {{/tb_dct/dct_inst/px_delta[5]} -radix hexadecimal} {{/tb_dct/dct_inst/px_delta[4]} -radix hexadecimal} {{/tb_dct/dct_inst/px_delta[3]} -radix hexadecimal} {{/tb_dct/dct_inst/px_delta[2]} -radix hexadecimal} {{/tb_dct/dct_inst/px_delta[1]} -radix hexadecimal} {{/tb_dct/dct_inst/px_delta[0]} -radix hexadecimal}} -expand -subitemconfig {{/tb_dct/dct_inst/px_delta[7]} {-height 30 -radix hexadecimal} {/tb_dct/dct_inst/px_delta[6]} {-height 30 -radix hexadecimal} {/tb_dct/dct_inst/px_delta[5]} {-height 30 -radix hexadecimal} {/tb_dct/dct_inst/px_delta[4]} {-height 30 -radix hexadecimal} {/tb_dct/dct_inst/px_delta[3]} {-height 30 -radix hexadecimal} {/tb_dct/dct_inst/px_delta[2]} {-height 30 -radix hexadecimal} {/tb_dct/dct_inst/px_delta[1]} {-height 30 -radix hexadecimal} {/tb_dct/dct_inst/px_delta[0]} {-height 30 -radix hexadecimal}} /tb_dct/dct_inst/px_delta
 add wave -noupdate -radix hexadecimal /tb_dct/dct_inst/cur_dct
 add wave -noupdate -radix hexadecimal /tb_dct/dct_inst/dct_sel_run
 add wave -noupdate -radix hexadecimal /tb_dct/dct_inst/px_delta_sa
@@ -107,7 +107,42 @@ add wave -noupdate -radix hexadecimal /tb_dct/col_dct_stream/tlast
 add wave -noupdate -radix hexadecimal /tb_dct/col_dct_stream/tid
 add wave -noupdate -radix hexadecimal /tb_dct/col_dct_stream/tdest
 add wave -noupdate -radix hexadecimal /tb_dct/col_dct_stream/tuser
+add wave -noupdate -divider 2D_DCT
+add wave -noupdate /tb_dct/second_dct_inst/clk_i
+add wave -noupdate /tb_dct/second_dct_inst/rst_i
+add wave -noupdate /tb_dct/second_dct_inst/px_unpack
+add wave -noupdate /tb_dct/second_dct_inst/cur_dct
+add wave -noupdate /tb_dct/second_dct_inst/dct_sel_run
+add wave -noupdate /tb_dct/second_dct_inst/px_delta
+add wave -noupdate /tb_dct/second_dct_inst/px_delta_sa
+add wave -noupdate /tb_dct/second_dct_inst/mult_px
+add wave -noupdate /tb_dct/second_dct_inst/mult_coef
+add wave -noupdate /tb_dct/second_dct_inst/mult_result
+add wave -noupdate /tb_dct/second_dct_inst/cut_tc
+add wave -noupdate /tb_dct/second_dct_inst/add_stage
+add wave -noupdate /tb_dct/second_dct_inst/dct
+add wave -noupdate /tb_dct/second_dct_inst/mult_ready
+add wave -noupdate /tb_dct/second_dct_inst/data_path_ready
+add wave -noupdate /tb_dct/second_dct_inst/mult_valid_pipe
+add wave -noupdate /tb_dct/second_dct_inst/mult_tlast_pipe
+add wave -noupdate /tb_dct/second_dct_inst/mult_tuser_pipe
+add wave -noupdate /tb_dct/second_dct_inst/was_tuser
+add wave -noupdate /tb_dct/second_dct_inst/was_tlast
+add wave -noupdate /tb_dct/second_dct_inst/dct_sa
+add wave -noupdate /tb_dct/second_dct_inst/dct_real
+add wave -noupdate -divider {2D DCT Stream}
+add wave -noupdate /tb_dct/dct_2d_stream/aclk
+add wave -noupdate /tb_dct/dct_2d_stream/aresetn
+add wave -noupdate /tb_dct/dct_2d_stream/tvalid
+add wave -noupdate /tb_dct/dct_2d_stream/tready
+add wave -noupdate /tb_dct/dct_2d_stream/tdata
 add wave -noupdate -radix hexadecimal /tb_dct/dct_from_parallel
+add wave -noupdate /tb_dct/dct_2d_stream/tstrb
+add wave -noupdate /tb_dct/dct_2d_stream/tkeep
+add wave -noupdate /tb_dct/dct_2d_stream/tlast
+add wave -noupdate /tb_dct/dct_2d_stream/tid
+add wave -noupdate /tb_dct/dct_2d_stream/tdest
+add wave -noupdate /tb_dct/dct_2d_stream/tuser
 TreeUpdate [SetDefaultTree]
 WaveRestoreCursors {{Cursor 1} {487369860 ps} 0}
 quietly wave cursor active 1
@@ -125,4 +160,4 @@ configure wave -griddelta 40
 configure wave -timeline 0
 configure wave -timelineunits ns
 update
-WaveRestoreZoom {0 ps} {1503668250 ps}
+WaveRestoreZoom {26426567 ps} {31778523 ps}

@@ -5,35 +5,39 @@ import dct_pkg::*;
 
 module tb_dct;
 
-parameter int    CLK_T            = 10_000;
-parameter int    PX_WIDTH         = 8;
-parameter int    FRAME_RES_X      = 1920;
-parameter int    FRAME_RES_Y      = 1080;
-parameter int    TOTAL_X          = 2200;
-parameter int    TOTAL_Y          = 1125;
-parameter string FILE_PATH        = "./img.hex";
-parameter int    RANDOM_TVALID    = 1;
-parameter int    RANDOM_TREADY    = 1;
-parameter int    TDATA_WIDTH      = PX_WIDTH % 8 ?
-                                    ( PX_WIDTH / 8 + 1 ) * 8 :
-                                    PX_WIDTH;
-parameter int    PREP_TDATA_WIDTH = PX_WIDTH * 8;
-parameter int    DCT_WIDTH        = PX_WIDTH + 3 + COEF_FRACT_WIDTH;
-parameter int    DCT_TDATA_WIDTH  = DCT_WIDTH % 8 ?
-                                    ( DCT_WIDTH / 8 + 1 ) * 8 :
-                                    DCT_WIDTH;
-parameter int    PAR_TDATA_WIDTH  = DCT_WIDTH * 8;
+parameter int    CLK_T              = 10_000;
+parameter int    PX_WIDTH           = 8;
+parameter int    FRAME_RES_X        = 1920;
+parameter int    FRAME_RES_Y        = 1080;
+parameter int    TOTAL_X            = 2200;
+parameter int    TOTAL_Y            = 1125;
+parameter string FILE_PATH          = "./img.hex";
+parameter int    RANDOM_TVALID      = 0;
+parameter int    RANDOM_TREADY      = 0;
+parameter int    TDATA_WIDTH        = PX_WIDTH % 8 ?
+                                      ( PX_WIDTH / 8 + 1 ) * 8 :
+                                      PX_WIDTH;
+parameter int    PREP_TDATA_WIDTH   = PX_WIDTH * 8;
+parameter int    DCT_WIDTH          = PX_WIDTH + 3 + COEF_FRACT_WIDTH;
+parameter int    DCT_TDATA_WIDTH    = DCT_WIDTH % 8 ?
+                                      ( DCT_WIDTH / 8 + 1 ) * 8 :
+                                      DCT_WIDTH;
+parameter int    PAR_TDATA_WIDTH    = DCT_WIDTH * 8;
+parameter int    DCT_2D_WIDTH       = DCT_WIDTH + 3;
+parameter int    DCT_2D_TDATA_WIDTH = DCT_2D_WIDTH % 8 ?
+                                      ( DCT_2D_WIDTH / 8 + 1 ) * 8 :
+                                      DCT_2D_WIDTH;
 
 bit clk;
 bit rst;
 
 bit [7 : 0] pkt_byte_q [$];
 
-function automatic real dct_to_real( input bit [DCT_WIDTH - 1 : 0] dct );
+function automatic real dct_to_real( input bit [DCT_2D_WIDTH - 1 : 0] dct );
 
-  bit [DCT_WIDTH - 1 : 0] dct_sa = dct[DCT_WIDTH - 1] ? { dct[DCT_WIDTH - 1], ~dct[DCT_WIDTH - 2 : 0] + 1'b1 } : dct;
-  dct_to_real = dct_sa[DCT_WIDTH - 1] ? -( int'( dct_sa[DCT_WIDTH - 2 : COEF_FRACT_WIDTH] ) + int'( dct_sa[COEF_FRACT_WIDTH - 1 : 0] ) / real'( 2 ** COEF_FRACT_WIDTH ) ) :
-                                        int'( dct_sa[DCT_WIDTH - 2 : COEF_FRACT_WIDTH] ) + int'( dct_sa[COEF_FRACT_WIDTH - 1 : 0] ) / real'( 2 ** COEF_FRACT_WIDTH ); 
+  bit [DCT_2D_WIDTH - 1 : 0] dct_sa = dct[DCT_2D_WIDTH - 1] ? { dct[DCT_2D_WIDTH - 1], ~dct[DCT_2D_WIDTH - 2 : 0] + 1'b1 } : dct;
+  dct_to_real = dct_sa[DCT_2D_WIDTH - 1] ? -( int'( dct_sa[DCT_2D_WIDTH - 2 : COEF_FRACT_WIDTH] ) + int'( dct_sa[COEF_FRACT_WIDTH - 1 : 0] ) / real'( 2 ** COEF_FRACT_WIDTH ) ) :
+                                        int'( dct_sa[DCT_2D_WIDTH - 2 : COEF_FRACT_WIDTH] ) + int'( dct_sa[COEF_FRACT_WIDTH - 1 : 0] ) / real'( 2 ** COEF_FRACT_WIDTH ); 
 
 endfunction
 
@@ -70,23 +74,33 @@ axi4_stream_if #(
 );
 
 axi4_stream_if #(
-  .TDATA_WIDTH ( DCT_TDATA_WIDTH  ),
-  .TID_WIDTH   ( 1                ),
-  .TDEST_WIDTH ( 1                ),
-  .TUSER_WIDTH ( 1                )
+  .TDATA_WIDTH ( DCT_TDATA_WIDTH ),
+  .TID_WIDTH   ( 1               ),
+  .TDEST_WIDTH ( 1               ),
+  .TUSER_WIDTH ( 1               )
 ) dct_stream (
-  .aclk        ( clk              ),
-  .aresetn     ( !rst             )
+  .aclk        ( clk             ),
+  .aresetn     ( !rst            )
 );
 
 axi4_stream_if #(
-  .TDATA_WIDTH ( PAR_TDATA_WIDTH  ),
-  .TID_WIDTH   ( 1                ),
-  .TDEST_WIDTH ( 1                ),
-  .TUSER_WIDTH ( 1                )
+  .TDATA_WIDTH ( PAR_TDATA_WIDTH ),
+  .TID_WIDTH   ( 1               ),
+  .TDEST_WIDTH ( 1               ),
+  .TUSER_WIDTH ( 1               )
 ) col_dct_stream (
-  .aclk        ( clk              ),
-  .aresetn     ( !rst             )
+  .aclk        ( clk             ),
+  .aresetn     ( !rst            )
+);
+
+axi4_stream_if #(
+  .TDATA_WIDTH ( DCT_2D_TDATA_WIDTH ),
+  .TID_WIDTH   ( 1                  ),
+  .TDEST_WIDTH ( 1                  ),
+  .TUSER_WIDTH ( 1                  )
+) dct_2d_stream (
+  .aclk        ( clk                ),
+  .aresetn     ( !rst               )
 );
 
 AXI4StreamVideoSource #(
@@ -100,13 +114,13 @@ AXI4StreamVideoSource #(
 ) video_source;
 
 AXI4StreamSlave #(
-  .TDATA_WIDTH   ( PAR_TDATA_WIDTH ),
-  .TID_WIDTH     ( 1               ),
-  .TDEST_WIDTH   ( 1               ),
-  .TUSER_WIDTH   ( 1               ),
-  .RANDOM_TREADY ( RANDOM_TREADY   ),
-  .VERBOSE       ( 0               ),
-  .WATCHDOG_EN   ( 0               )
+  .TDATA_WIDTH   ( DCT_2D_TDATA_WIDTH ),
+  .TID_WIDTH     ( 1                  ),
+  .TDEST_WIDTH   ( 1                  ),
+  .TUSER_WIDTH   ( 1                  ),
+  .RANDOM_TREADY ( RANDOM_TREADY      ),
+  .VERBOSE       ( 0                  ),
+  .WATCHDOG_EN   ( 0                  )
 ) video_sink;
 
 task automatic clk_gen();
@@ -133,9 +147,9 @@ real real_q [$];
 
 task automatic recorder();
 
-  bit [7 : 0]                    rx_bytes [$];
-  bit [PAR_TDATA_WIDTH - 1 : 0]  tdata;
-  bit [7 : 0][DCT_WIDTH - 1 : 0] dct_pack;
+  bit [7 : 0]                       rx_bytes [$];
+  bit [DCT_2D_TDATA_WIDTH - 1 : 0]  tdata;
+  bit [DCT_2D_WIDTH - 1 : 0] dct;
   forever
     begin
       if( rx_data_mbx.num() > 0 )
@@ -143,11 +157,10 @@ task automatic recorder();
           rx_data_mbx.get( rx_bytes );
           while( rx_bytes.size() > 0 )
             begin
-              for( int i = 0; i < ( PAR_TDATA_WIDTH / 8 ); i++ )
+              for( int i = 0; i < ( DCT_2D_TDATA_WIDTH / 8 ); i++ )
                 tdata[( i + 1 ) * 8 - 1 -: 8] = rx_bytes.pop_front();
-              dct_pack = tdata;
-              for( int i = 0; i < 8; i++ )
-                real_q.push_back( dct_to_real( dct_pack[i] ) );
+              dct = tdata;
+              real_q.push_back( dct_to_real( dct ) );
             end
         end
       else
@@ -223,16 +236,25 @@ px_to_cols #(
   .video_o ( col_dct_stream )
 );
 
-real dct_from_parallel [7 : 0];
+dct_1d #(
+  .PX_WIDTH          ( DCT_WIDTH      ),
+  .FIXED_POINT_INPUT ( 1              )
+) second_dct_inst (
+  .clk_i             ( clk            ),
+  .rst_i             ( rst            ),
+  .video_i           ( col_dct_stream ),
+  .dct_o             ( dct_2d_stream  )
+);
+
+real dct_from_parallel;
 
 always_comb
-  for( int i = 0; i < 8; i++ )
-    dct_from_parallel[i] = dct_to_real( px_to_cols_inst.output_data[i] );
+  dct_from_parallel = dct_to_real( second_dct_inst.dct );
 
 initial
   begin
     video_source = new( video_i );
-    video_sink   = new( .axi4_stream_if_v ( col_dct_stream ),
+    video_sink   = new( .axi4_stream_if_v ( dct_2d_stream ),
                         .rx_data_mbx      ( rx_data_mbx )  );
     fork
       clk_gen();
@@ -244,7 +266,7 @@ initial
     video_source.run();
     repeat( 2 )
       begin
-        while( !( col_dct_stream.tvalid && col_dct_stream.tready && col_dct_stream.tuser ) )
+        while( !( dct_2d_stream.tvalid && dct_2d_stream.tready && dct_2d_stream.tuser ) )
           @( posedge clk );
         @( posedge clk );
       end

@@ -95,6 +95,7 @@ logic [3 : 0]                            mult_tlast_pipe;
 logic [3 : 0]                            mult_tuser_pipe;
 logic                                    was_tuser;
 logic                                    was_tlast;
+logic [2 : 0]                            q_ptr;
 
 assign video_i.tready = mult_ready;
 
@@ -183,6 +184,13 @@ always_comb
   for( int i = 0; i < 8; i++ )
     px_delta_sa[i] = tc_to_sa( px_delta[i] );
 
+always_ff @( posedge clk_i, posedge rst_i )
+  if( rst_i )
+    q_ptr <= 3'd0;
+  else
+    if( dct_sel_run && data_path_ready && cur_dct == 3'd7 )
+      q_ptr <= q_ptr + 1'b1;
+
 // Weired magic happening there
 // Look for description of algorithm in the header
 // we are preparing what's is needed to be multiplied
@@ -202,7 +210,10 @@ always_ff @( posedge clk_i, posedge rst_i )
                 mult_px[j] <= px_delta_sa[j * 2 + i % 2];
               else
                 mult_px[j]   <= { px_delta_sa[j * 2 + i % 2], COEF_FRACT_WIDTH'( 0 ) };
-              mult_coef[j] <= { COEFS[i][j][COEF_FRACT_WIDTH], ( PX_INT_WIDTH )'( 0 ), COEFS[i][j][COEF_FRACT_WIDTH - 1 : 0] };
+              if( QUANTINIZATION )
+                mult_coef[j] <= { Q_COEFS[q_ptr][i][j][COEF_FRACT_WIDTH], ( PX_INT_WIDTH )'( 0 ), Q_COEFS[q_ptr][i][j][COEF_FRACT_WIDTH - 1 : 0] };
+              else
+                mult_coef[j] <= { COEFS[i][j][COEF_FRACT_WIDTH], ( PX_INT_WIDTH )'( 0 ), COEFS[i][j][COEF_FRACT_WIDTH - 1 : 0] };
             end
 
 // Performing multiplications and restoring sign

@@ -12,8 +12,8 @@ parameter int    FRAME_RES_Y        = 1080;
 parameter int    TOTAL_X            = 2200;
 parameter int    TOTAL_Y            = 1125;
 parameter string FILE_PATH          = "./img.hex";
-parameter int    RANDOM_TVALID      = 0;
-parameter int    RANDOM_TREADY      = 0;
+parameter int    RANDOM_TVALID      = 1;
+parameter int    RANDOM_TREADY      = 1;
 parameter int    TDATA_WIDTH        = PX_WIDTH % 8 ?
                                       ( PX_WIDTH / 8 + 1 ) * 8 :
                                       PX_WIDTH;
@@ -238,7 +238,8 @@ px_to_cols #(
 
 dct_1d #(
   .PX_WIDTH          ( DCT_WIDTH      ),
-  .FIXED_POINT_INPUT ( 1              )
+  .FIXED_POINT_INPUT ( 1              ),
+  .QUANTINIZATION    ( 1              )
 ) second_dct_inst (
   .clk_i             ( clk            ),
   .rst_i             ( rst            ),

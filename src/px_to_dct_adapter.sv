@@ -60,7 +60,8 @@ always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
     packed_par_tdata <= PAR_TDATA_WIDTH'( 0 );
   else
-    packed_par_tdata[px_cnt] <= ser_video_tdata[ln_cnt][PX_WIDTH - 1 : 0] - PX_WIDTH'( VALUE_SHIFT );
+    if( ser_video_tready[ln_cnt] )
+      packed_par_tdata[px_cnt] <= ser_video_tdata[ln_cnt][PX_WIDTH - 1 : 0] - PX_WIDTH'( VALUE_SHIFT );
 
 assign par_video_o.tdata = packed_par_tdata;
 

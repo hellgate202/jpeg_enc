@@ -18,7 +18,7 @@ parameter int    TDATA_WIDTH      = PX_WIDTH % 8 ?
                                     ( PX_WIDTH / 8 + 1 ) * 8 :
                                     PX_WIDTH;
 parameter int    PREP_TDATA_WIDTH = PX_WIDTH * 8;
-parameter int    DCT_WIDTH        = PX_WIDTH + 4 + COEF_FRACT_WIDTH;
+parameter int    DCT_WIDTH        = PX_WIDTH + 3 + COEF_FRACT_WIDTH;
 parameter int    DCT_TDATA_WIDTH  = DCT_WIDTH % 8 ?
                                     ( DCT_WIDTH / 8 + 1 ) * 8 :
                                     DCT_WIDTH;
@@ -28,8 +28,6 @@ bit clk;
 bit rst;
 
 bit [7 : 0] pkt_byte_q [$];
-
-real dct_from_parallel [7 : 0];
 
 function automatic real dct_to_real( input bit [DCT_WIDTH - 1 : 0] dct );
 
@@ -208,7 +206,7 @@ px_to_dct_adapter #(
 
 dct_1d #(
   .PX_WIDTH ( PX_WIDTH       )
-)(
+) dct_inst (
   .clk_i    ( clk            ),
   .rst_i    ( rst            ),
   .video_i  ( prepared_video ),
@@ -218,16 +216,18 @@ dct_1d #(
 px_to_cols #(
   .PX_WIDTH ( DCT_WIDTH     ),
   .MAT_SIZE ( 8             )
-)(
+) px_to_cols_inst (
   .clk_i   ( clk            ),
   .rst_i   ( rst            ),
   .video_i ( dct_stream     ),
   .video_o ( col_dct_stream )
 );
 
+real dct_from_parallel [7 : 0];
+
 always_comb
   for( int i = 0; i < 8; i++ )
-    dct_from_parallel[i] = dct_to_real( transpose_unit.output_data[i] );
+    dct_from_parallel[i] = dct_to_real( px_to_cols_inst.output_data[i] );
 
 initial
   begin
@@ -244,13 +244,13 @@ initial
     video_source.run();
     repeat( 2 )
       begin
-        while( !( parallel_o.tvalid && parallel_o.tready && parallel_o.tuser ) )
+        while( !( col_dct_stream.tvalid && col_dct_stream.tready && col_dct_stream.tuser ) )
           @( posedge clk );
         @( posedge clk );
       end
     repeat( 10 )
       @( posedge clk );
-    //check_data();
+    check_data();
     $display( "Everything is fine." );
     $stop();
   end

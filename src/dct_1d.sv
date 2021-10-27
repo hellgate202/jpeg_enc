@@ -39,7 +39,7 @@ module dct_1d #(
 );
 
 // Size of variable before multiplication
-localparam int MULT_WIDTH        = PX_WIDTH + 2 + COEF_FRACT_WIDTH;
+localparam int MULT_WIDTH        = PX_WIDTH + 1 + COEF_FRACT_WIDTH;
 // Multiplication result_width (-1 because we ommit sign in multiplication)
 localparam int MULT_RESULT_WIDTH = ( MULT_WIDTH - 1 ) * 2 + 1;
 
@@ -48,12 +48,12 @@ localparam int DCT_TDATA_WIDTH = ( MULT_WIDTH + 2 ) % 8 ?
                                  ( MULT_WIDTH + 2 );
 
 // Two's complement to sign + absolute value
-function logic [PX_WIDTH + 1 : 0] tc_to_sa( input logic [PX_WIDTH + 1 : 0] tc );
+function logic [PX_WIDTH : 0] tc_to_sa( input logic [PX_WIDTH + 1 : 0] tc );
 
-  if( tc[PX_WIDTH + 1] )
+  if( tc[PX_WIDTH] )
     begin
-      tc_to_sa[PX_WIDTH + 1] = 1'b1;
-      tc_to_sa[PX_WIDTH : 0] = ~tc[PX_WIDTH : 0] + 1'b1;
+      tc_to_sa[PX_WIDTH]         = 1'b1;
+      tc_to_sa[PX_WIDTH - 1 : 0] = ~tc[PX_WIDTH - 1 : 0] + 1'b1;
     end
   else
     tc_to_sa = tc;
@@ -75,11 +75,11 @@ function logic [MULT_WIDTH - 1 : 0] sa_to_tc( input logic [MULT_WIDTH - 1 : 0] s
     end
 endfunction
 
-logic [7 : 0][PX_WIDTH : 0]              px_unpack;
+logic [7 : 0][PX_WIDTH - 1: 0]           px_unpack;
 logic [2 : 0]                            cur_dct;
 logic                                    dct_sel_run;
-logic [7 : 0][PX_WIDTH + 1 : 0]          px_delta;
-logic [7 : 0][PX_WIDTH + 1 : 0]          px_delta_sa;
+logic [7 : 0][PX_WIDTH : 0]              px_delta;
+logic [7 : 0][PX_WIDTH : 0]              px_delta_sa;
 logic [3 : 0][MULT_WIDTH - 1 : 0]        mult_px;
 logic [3 : 0][MULT_WIDTH - 1 : 0]        mult_coef;
 logic [3 : 0][MULT_RESULT_WIDTH - 1 : 0] mult_result;
@@ -101,17 +101,17 @@ assign px_unpack = video_i.tdata;
 // Addition and subtraction of pixel values from buffer that is not active
 always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
-    px_delta    <= ( ( PX_WIDTH + 2 ) * 8 )'( 0 );
+    px_delta <= ( ( PX_WIDTH + 1 ) * 8 )'( 0 );
   else
     if( mult_ready )
       // Values are in two's complement so we do sign extension because
       // overflows are likely to be occured
       for( int i = 0; i < 4; i++ )
         begin
-          px_delta[i * 2]     <= { px_unpack[i][PX_WIDTH], px_unpack[i] } +
-                                 { px_unpack[7 - i][PX_WIDTH], px_unpack[7 - i] };
-          px_delta[i * 2 + 1] <= { px_unpack[i][PX_WIDTH], px_unpack[i] } -
-                                 { px_unpack[7 - i][PX_WIDTH], px_unpack[7 - i] };
+          px_delta[i * 2]     <= { px_unpack[i][PX_WIDTH - 1], px_unpack[i] } + 
+                                 { px_unpack[7 - i][PX_WIDTH - 1], px_unpack[7 - i] };
+          px_delta[i * 2 + 1] <= { px_unpack[i][PX_WIDTH - 1], px_unpack[i] } - 
+                                 { px_unpack[7 - i][PX_WIDTH - 1], px_unpack[7 - i] };
         end
 
 always_ff @( posedge clk_i, posedge rst_i )
@@ -197,7 +197,7 @@ always_ff @( posedge clk_i, posedge rst_i )
           for( int j = 0; j < 4; j++ )
             begin
               mult_px[j]   <= { px_delta_sa[j * 2 + i % 2], COEF_FRACT_WIDTH'( 0 ) };
-              mult_coef[j] <= { COEFS[i][j][COEF_FRACT_WIDTH], ( PX_WIDTH + 1 )'( 0 ), COEFS[i][j][COEF_FRACT_WIDTH - 1 : 0] };
+              mult_coef[j] <= { COEFS[i][j][COEF_FRACT_WIDTH], ( PX_WIDTH )'( 0 ), COEFS[i][j][COEF_FRACT_WIDTH - 1 : 0] };
             end
 
 // Performing multiplications and restoring sign
@@ -218,7 +218,7 @@ always_ff @( posedge clk_i, posedge rst_i )
 always_comb
   for( int i = 0; i < 4; i++ )
     cut_tc[i] = sa_to_tc( { mult_result[i][MULT_RESULT_WIDTH - 1], 
-                            mult_result[i][MULT_RESULT_WIDTH - PX_WIDTH - 3 : COEF_FRACT_WIDTH] } );
+                            mult_result[i][MULT_RESULT_WIDTH - PX_WIDTH - 2 : COEF_FRACT_WIDTH] } );
 
 // To get DCT value we need to sum all products
 always_ff @( posedge clk_i, posedge rst_i )

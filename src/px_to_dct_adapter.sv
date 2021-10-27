@@ -20,24 +20,9 @@ localparam int SER_TDATA_WIDTH_B = SER_TDATA_WIDTH / 8;
 localparam int PAR_TDATA_WIDTH   = PX_WIDTH * 8;
 localparam int VALUE_SHIFT       = 2 ** PX_WIDTH / 2;
 
-logic [2 : 0]                   px_cnt;
-logic [2 : 0]                   ln_cnt;
-logic [7 : 0][PX_WIDTH - 1 : 0] packed_par_tdata;
-
-always_ff @( posedge clk_i, posedge rst_i )
-  if( rst_i )
-    px_cnt <= 3'd0;
-  else
-    if( ser_video_i[ln_cnt].tvalid && ser_video_i[ln_cnt].tready )
-      px_cnt <= px_cnt + 1'b1;
-
-always_ff @( posedge clk_i, posedge rst_i )
-  if( rst_i )
-    ln_cnt <= 3'd0;
-  else
-    if( ser_video_i[ln_cnt].tvalid && ser_video_i[ln_cnt].tready && px_cnt == 3'd7 )
-      ln_cnt <= ln_cnt + 1'b1;
-    
+logic [2 : 0]                          px_cnt;
+logic [2 : 0]                          ln_cnt;
+logic [7 : 0][PX_WIDTH - 1 : 0]        packed_par_tdata;
 logic [7 : 0][SER_TDATA_WIDTH - 1 : 0] ser_video_tdata;
 logic [7 : 0]                          ser_video_tvalid;
 logic [7 : 0]                          ser_video_tready;
@@ -49,21 +34,33 @@ genvar g;
 generate
   for( g = 0; g < 8; g++ )
     begin : if_unpack
-      ser_video_tdata[g]    = ser_video_i[g].tdata;
-      ser_video_tvalid[g]   = ser_video_i[g].tvalid;
-      ser_video_i[g].tready = ser_video_tready[g];
-      ser_video_tlast[g]    = ser_video_i[g].tlast;
-      ser_video_tuser[g]    = ser_video_i[g].tuser;
+      assign ser_video_tdata[g]    = ser_video_i[g].tdata;
+      assign ser_video_tvalid[g]   = ser_video_i[g].tvalid;
+      assign ser_video_i[g].tready = ser_video_tready[g];
+      assign ser_video_tlast[g]    = ser_video_i[g].tlast;
+      assign ser_video_tuser[g]    = ser_video_i[g].tuser;
     end
 endgenerate
 
 always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
+    px_cnt <= 3'd0;
+  else
+    if( ser_video_tvalid[ln_cnt] && ser_video_tready[ln_cnt] )
+      px_cnt <= px_cnt + 1'b1;
+
+always_ff @( posedge clk_i, posedge rst_i )
+  if( rst_i )
+    ln_cnt <= 3'd0;
+  else
+    if( ser_video_tvalid[ln_cnt] && ser_video_tready[ln_cnt] && px_cnt == 3'd7 )
+      ln_cnt <= ln_cnt + 1'b1;
+
+always_ff @( posedge clk_i, posedge rst_i )
+  if( rst_i )
     packed_par_tdata <= PAR_TDATA_WIDTH'( 0 );
   else
-    for( int i = 0; i < 8; i++ )
-      if( 3'( i ) == px_cnt )
-        packed_par_tdata[i] <= ser_video_i.tdata[PX_WIDTH - 1 : 0] - PX_WIDTH'( VALUE_SHIFT );
+    packed_par_tdata[px_cnt] <= ser_video_tdata[ln_cnt][PX_WIDTH - 1 : 0] - PX_WIDTH'( VALUE_SHIFT );
 
 assign par_video_o.tdata = packed_par_tdata;
 
@@ -71,7 +68,7 @@ always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
     par_video_o.tvalid <= 1'b0;
   else
-    if( px_cnt == 3'd7 && ser_video_i[ln_cnt].tvalid && ser_video_i[ln_cnt].tready )
+    if( px_cnt == 3'd7 && ser_video_tvalid[ln_cnt] && ser_video_tready[ln_cnt] )
       par_video_o.tvalid <= 1'b1;
     else
       if( par_video_o.tready )
@@ -81,20 +78,20 @@ always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
     par_video_o.tlast <= 1'b0;
   else
-    if( ser_video_i[ln_cnt].tvalid && ser_video_i[ln_cnt].tready && ser_video_i[ln_cnt].tlast )
+    if( ser_video_tvalid[7] && ser_video_tready[7] && ser_video_tlast[7] )
       par_video_o.tlast <= 1'b1;
     else
-      if( par_video_o.tready )
+      if( par_video_o.tvalid && par_video_o.tready )
         par_video_o.tlast <= 1'b0;
 
 always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
     par_video_o.tuser <= 1'b0;
   else
-    if( ser_video_i[ln_cnt].tvalid && ser_video_i[ln_cnt].tready && ser_video_i[ln_cnt].tuser )
+    if( ser_video_tvalid[ln_cnt] && ser_video_tready[ln_cnt] && ser_video_tuser[ln_cnt] )
       par_video_o.tuser <= 1'b1;
     else
-      if( par_video_o.tready )
+      if( par_video_o.tvalid && par_video_o.tready )
         par_video_o.tuser <= 1'b0;
 
 always_comb

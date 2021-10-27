@@ -8,10 +8,10 @@ exec ../scripts/check_dct.py $x_res $y_res
 
 vlib work
 vlog -sv -f ./files 
-vopt +acc tb_dct -o tb_dct_opt -G/tb_dct/FRAME_RES_X=$x_res \
-                               -G/tb_dct/FRAME_RES_Y=$y_res \
-                               -G/tb_dct/TOTAL_X=$total_x   \
-                               -G/tb_dct/TOTAL_Y=$total_y
-vsim tb_dct_opt
+vsim tb_dct -G/tb_dct/FRAME_RES_X=$x_res \
+            -G/tb_dct/FRAME_RES_Y=$y_res \
+            -G/tb_dct/TOTAL_X=$total_x   \
+            -G/tb_dct/TOTAL_Y=$total_y
+
 do wave.do
 run -all

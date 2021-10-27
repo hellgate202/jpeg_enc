@@ -21,23 +21,17 @@ localparam int TDATA_WIDTH     = PX_WIDTH % 8 ?
                                  ( PX_WIDTH / 8 + 1 ) * 8 :
                                  PX_WIDTH;
 localparam int TDATA_WIDTH_B   = TDATA_WIDTH / 8;
-localparam int BUF_AMOUNT      = LINES_TO_OUTPUT * 2;
 localparam int BUF_PNT_WIDTH   = $clog2( BUF_AMOUNT );
-localparam int PAR_TDATA_WIDTH = ( PX_WIDTH * LINES_TO_OUTPUT ) % 8 ?
-                                 ( ( PX_WIDTH * LINES_TO_OUTPUT ) / 8 + 1 ) * 8 :
-                                 ( PX_WIDTH * LINES_TO_OUTPUT );
+localparam int PAR_TDATA_WIDTH = ( PX_WIDTH * BUF_AMOUNT ) % 8 ?
+                                 ( ( PX_WIDTH * BUF_AMOUNT ) / 8 + 1 ) * 8 :
+                                 ( PX_WIDTH * BUF_AMOUNT );
 localparam int FIFO_DEPTH      = FRAME_RES_X * 2;
 
 genvar g;
 
-logic [BUF_PNT_WIDTH - 1 : 0]                     buf_pnt;
-logic [BUF_AMOUNT - 1 : 0]                        pre_buf_tready;
-logic [BUF_AMOUNT - 1 : 0]                        pre_buf_tvalid;
-logic [BUF_AMOUNT - 1 : 0]                        buf_empty;
-logic                                             change_half;
-logic                                             cur_half;
-logic                                             read_in_progress;
-logic [LINES_TO_OUTPUT - 1 : 0][PX_WIDTH - 1 : 0] output_data;
+logic [BUF_PNT_WIDTH - 1 : 0] buf_pnt;
+logic [BUF_AMOUNT - 1 : 0]    pre_buf_tready;
+logic [BUF_AMOUNT - 1 : 0]    pre_buf_tvalid;
 
 always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )

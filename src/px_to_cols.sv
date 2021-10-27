@@ -4,7 +4,7 @@ module px_to_cols #(
   parameter int MAT_SIZE = 8
 )(
   input                 clk_i,
-  input                 rst_i
+  input                 rst_i,
   axi4_stream_if.slave  video_i,
   axi4_stream_if.master video_o
 );
@@ -19,6 +19,7 @@ localparam int TDATA_WIDTH  = ( MAT_SIZE * PX_WIDTH ) % 8 ?
 logic [ADDR_WIDTH - 1 : 0]                 wr_ptr;
 logic [1 : 0]                              wr;
 logic [ADDR_WIDTH - 1 : 0]                 rd_ptr;
+logic [ADDR_WIDTH - 1 : 0]                 rd_ptr_d1;
 logic [1 : 0]                              rd;
 logic [1 : 0][PX_WIDTH - 1 : 0]            rd_px_data;
 logic [1 : 0]                              buf_empty, buf_empty_comb;
@@ -43,34 +44,32 @@ always_comb
   begin
     next_state_wr = state_wr;
     case( state_wr )
-      begin
-        WRITE_BUF_0_S:
-          begin
-            if( wr_ptr == ( MAT_ELEMS - 1 ) && video_i.tvalid )
-              if( buf_empty[1] || buf_empty_comb[1] )
-                next_state_wr = WRITE_BUF_1_S;
-              else
-                next_state_wr = WAIT_BUF_1_EMPTY_S;
-          end
-        WAIT_BUF_1_EMPTY_S:
-          begin
+      WRITE_BUF_0_S:
+        begin
+          if( wr_ptr == ( MAT_ELEMS - 1 ) && video_i.tvalid )
             if( buf_empty[1] || buf_empty_comb[1] )
               next_state_wr = WRITE_BUF_1_S;
-          end
-        WRITE_BUF_1_S:
-          begin
-            if( wr_ptr == ( MAT_ELEMS - 1 ) && video_i.tvalid )
-              if( buf_empty[0] || buf_empty_comb[0] )
-                next_state_wr = WRITE_BUF_0_S;
-              else
-                next_state_wr = WAIT_BUF_0_EMPTY_S;
-          end
-        WAIT_BUF_0_EMPTY_S:
-          begin
+            else
+              next_state_wr = WAIT_BUF_1_EMPTY_S;
+        end
+      WAIT_BUF_1_EMPTY_S:
+        begin
+          if( buf_empty[1] || buf_empty_comb[1] )
+            next_state_wr = WRITE_BUF_1_S;
+        end
+      WRITE_BUF_1_S:
+        begin
+          if( wr_ptr == ( MAT_ELEMS - 1 ) && video_i.tvalid )
             if( buf_empty[0] || buf_empty_comb[0] )
               next_state_wr = WRITE_BUF_0_S;
-          end
-      end
+            else
+              next_state_wr = WAIT_BUF_0_EMPTY_S;
+        end
+      WAIT_BUF_0_EMPTY_S:
+        begin
+          if( buf_empty[0] || buf_empty_comb[0] )
+            next_state_wr = WRITE_BUF_0_S;
+        end
     endcase
   end
 
@@ -78,46 +77,51 @@ enum logic [1 : 0] { WAIT_BUF_0_FULL_S,
                      READ_BUF_0_S,
                      WAIT_BUF_1_FULL_S,
                      READ_BUF_1_S
-                   } state_rd, next_state_rd;
+                   } state_rd, state_rd_d1, next_state_rd;
 
 always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
-    state_rd <= WAIT_BUF_0_FULL_S;
+    begin
+      state_rd    <= WAIT_BUF_0_FULL_S;
+      state_rd_d1 <= WAIT_BUF_0_FULL_S;
+    end
   else
-    state_rd <= next_state_rd;
+    begin
+      state_rd    <= next_state_rd;
+      if( data_path_ready )
+        state_rd_d1 <= state_rd;
+    end
 
 always_comb
   begin
     next_state_rd = state_rd;
     case( state_rd )
-      begin
-        WAIT_BUF_0_FULL_S:
-          begin
-            if( buf_full[0] || buf_full_comb[0] )
-              next_state_rd = READ_BUF_0_S;
-          end
-        READ_BUF_0_S:
-          begin
-            if( rd_ptr == ( MAT_ELEMS - 1 ) )
-              if( buf_full[1] || buf_full_comb[1] )
-                next_state_rd = READ_BUF_1_S;
-              else
-                next_state_rd = WAIT_BUF_1_FULL_S;
-          end
-        WAIT_BUF_1_FULL_S:
-          begin
+      WAIT_BUF_0_FULL_S:
+        begin
+          if( buf_full[0] || buf_full_comb[0] )
+            next_state_rd = READ_BUF_0_S;
+        end
+      READ_BUF_0_S:
+        begin
+          if( rd_ptr == ( MAT_ELEMS - 1 ) )
             if( buf_full[1] || buf_full_comb[1] )
               next_state_rd = READ_BUF_1_S;
-          end
-        READ_BUF_1_S:
-          begin
-            if( rd_ptr == ( MAT_ELEMS - 1 ) )
-              if( buf_full[0] || buf_full_comb[0])
-                next_state_rd = READ_BUF_0_S;
-              else
-                next_state_rd = WAIT_BUF_0_FULL_S;
-          end
-      end
+            else
+              next_state_rd = WAIT_BUF_1_FULL_S;
+        end
+      WAIT_BUF_1_FULL_S:
+        begin
+          if( buf_full[1] || buf_full_comb[1] )
+            next_state_rd = READ_BUF_1_S;
+        end
+      READ_BUF_1_S:
+        begin
+          if( rd_ptr == ( MAT_ELEMS - 1 ) )
+            if( buf_full[0] || buf_full_comb[0])
+              next_state_rd = READ_BUF_0_S;
+            else
+              next_state_rd = WAIT_BUF_0_FULL_S;
+        end
     endcase
   end
 
@@ -127,11 +131,14 @@ always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
     wr_ptr <= ADDR_WIDTH'( 0 );
   else
-    if( video_i.tvalid && video_i.tready )
-      if( wr_ptr >= ( MAT_SIZE * ( MAT_SIZE - 1 ) )
-        wr_ptr <= wr_ptr + ADDR_WIDTH'( MAT_SIZE + 1 );
-      else
-        wr_ptr <= wr_ptr + ADDR_WIDTH'( MAT_SIZE );
+    if( wr_ptr == ADDR_WIDTH'( MAT_ELEMS - 1 ) )
+      wr_ptr <= ADDR_WIDTH'( 0 );
+    else
+      if( video_i.tvalid && video_i.tready )
+        if( wr_ptr >= ( MAT_SIZE * ( MAT_SIZE - 1 ) ) )
+          wr_ptr <= wr_ptr + ADDR_WIDTH'( MAT_SIZE + 1 );
+        else
+          wr_ptr <= wr_ptr + ADDR_WIDTH'( MAT_SIZE );
 
 always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
@@ -161,9 +168,35 @@ always_comb
     else
       begin
         if( wr[0] )
-          buf_empty_comb[0] = 1'b1;
+          buf_empty_comb[0] = 1'b0;
         if( wr[1] )
-          buf_empty_comb[1] = 1'b1;
+          buf_empty_comb[1] = 1'b0;
+      end
+  end
+
+always_ff @( posedge clk_i, posedge rst_i )
+  if( rst_i )
+    buf_full <= 2'b00;
+  else
+    buf_full <= buf_full_comb;
+
+always_comb
+  begin
+    buf_full_comb = buf_full;
+    if( wr_ptr == ADDR_WIDTH'( MAT_ELEMS - 1 ) )
+      begin
+        if( state_wr == WRITE_BUF_0_S )
+          buf_full_comb[0] = 1'b1;
+        else
+          if( state_wr == WRITE_BUF_1_S )
+            buf_full_comb[1] = 1'b1;
+      end
+    else
+      begin
+        if( rd[0] )
+          buf_full_comb[0] = 1'b0;
+        if( rd[1] )
+          buf_full_comb[1] = 1'b0;
       end
   end
 
@@ -175,12 +208,12 @@ always_ff @( posedge clk_i, posedge rst_i )
       if( state_wr == WRITE_BUF_0_S && video_i.tvalid && video_i.tlast )
         tlast_lock[0] <= 1'b1;
       else
-        if( state_rd == READ_BUF_0_S && rd_ptr == ADDR_WIDTH'( MAT_ELEMS - 1 ) )
+        if( state_rd_d1 == READ_BUF_0_S && rd_ptr_d1 == ADDR_WIDTH'( MAT_ELEMS - 1 ) )
           tlast_lock[0] <= 1'b0;
       if( state_wr == WRITE_BUF_1_S && video_i.tvalid && video_i.tlast )
         tlast_lock[1] <= 1'b1;
       else
-        if( state_rd == READ_BUF_1_S && rd_ptr == ADDR_WIDTH'( MAT_ELEMS - 1 ) )
+        if( state_rd_d1 == READ_BUF_1_S && rd_ptr_d1 == ADDR_WIDTH'( MAT_ELEMS - 1 ) )
           tlast_lock[1] <= 1'b0;
     end
 
@@ -192,12 +225,12 @@ always_ff @( posedge clk_i, posedge rst_i )
       if( state_wr == WRITE_BUF_0_S && video_i.tvalid && video_i.tuser )
         tuser_lock[0] <= 1'b1;
       else
-        if( state_rd == READ_BUF_0_S && rd_ptr == ADDR_WIDTH'( 0 ) )
+        if( state_rd == READ_BUF_0_S && rd_ptr_d1 == ADDR_WIDTH'( MAT_SIZE - 1 ) )
           tuser_lock[0] <= 1'b0;
       if( state_wr == WRITE_BUF_1_S && video_i.tvalid && video_i.tuser )
         tuser_lock[1] <= 1'b1;
       else
-        if( state_rd == READ_BUF_1_S && rd_ptr == ADDR_WIDTH'( 0 ) )
+        if( state_rd == READ_BUF_1_S && rd_ptr_d1 == ADDR_WIDTH'( MAT_SIZE - 1 ) )
           tuser_lock[1] <= 1'b0;
     end
 
@@ -207,7 +240,7 @@ always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
     video_o.tvalid <= 1'b0;
   else
-    if( |rd_ptr[RD_CNT_WIDTH - 1 : 0] )
+    if( &rd_ptr_d1[RD_CNT_WIDTH - 1 : 0] )
       video_o.tvalid <= 1'b1;
     else
       if( data_path_ready )
@@ -234,22 +267,29 @@ generate
     end
 endgenerate
 
-assign wr[0] = video_i.tvalid && state_wr = WRITE_BUF_0_S;
-assign wr[1] = video_i.tvalid && state_wr = WRITE_BUF_1_S;
+assign wr[0] = video_i.tvalid && state_wr == WRITE_BUF_0_S;
+assign wr[1] = video_i.tvalid && state_wr == WRITE_BUF_1_S;
 
 assign rd[0] = data_path_ready && state_rd == READ_BUF_0_S;
 assign rd[1] = data_path_ready && state_rd == READ_BUF_1_S;
 
 always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
+    rd_ptr_d1 <= ADDR_WIDTH'( 0 );
+  else
+    if( data_path_ready )
+      rd_ptr_d1 <= rd_ptr;
+
+always_ff @( posedge clk_i, posedge rst_i )
+  if( rst_i )
     output_data <= ( MAT_SIZE * PX_WIDTH )'( 0 );
   else
     if( data_path_ready )
-      if( state == READ_BUF_0_S )
-        output_data[rd_ptr[RD_CNT_WIDTH - 1 : 0]] <= rd_px_data[0];
+      if( state_rd_d1 == READ_BUF_0_S )
+        output_data[rd_ptr_d1[RD_CNT_WIDTH - 1 : 0]] <= rd_px_data[0];
       else
-        if( state == WRITE_BUF_0_S )
-          output_data[rd_ptr[RD_CNT_WIDTH - 1 : 0]] <= rd_px_data[1];
+        if( state_rd_d1 == READ_BUF_1_S )
+          output_data[rd_ptr_d1[RD_CNT_WIDTH - 1 : 0]] <= rd_px_data[1];
     
 assign video_o.tdata = TDATA_WIDTH'( output_data );
 
@@ -257,8 +297,8 @@ always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
     video_o.tlast <= 1'b0;
   else
-    if( ( state_rd == READ_BUF_0_S && tlast_lock[0] && rd_ptr == ADDR_WIDTH'( MAT_ELEMS ) ) ||
-        ( state_rd == READ_BUF_1_S && tlast_lock[1] && rd_ptr == ADDR_WIDTH'( MAT_ELEMS ) ) )
+    if( ( state_rd_d1 == READ_BUF_0_S && tlast_lock[0] && rd_ptr_d1 == ADDR_WIDTH'( MAT_ELEMS - 1 ) ) ||
+        ( state_rd_d1 == READ_BUF_1_S && tlast_lock[1] && rd_ptr_d1 == ADDR_WIDTH'( MAT_ELEMS - 1 ) ) )
       video_o.tlast <= 1'b1;
     else
       if( data_path_ready )
@@ -268,8 +308,8 @@ always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
     video_o.tuser <= 1'b0;
   else
-    if( ( state_rd == READ_BUF_0_S && tuser_lock[0] && rd_ptr == ADDR_WIDTH'( 0 ) ) ||
-        ( state_rd == READ_BUF_1_S && tuser_lock[1] && rd_ptr == ADDR_WIDTH'( 0 ) ) )
+    if( ( state_rd == READ_BUF_0_S && tuser_lock[0] && rd_ptr_d1 == ADDR_WIDTH'( MAT_SIZE - 1 ) ) ||
+        ( state_rd == READ_BUF_1_S && tuser_lock[1] && rd_ptr_d1 == ADDR_WIDTH'( MAT_SIZE - 1 ) ) )
       video_o.tuser <= 1'b1;
     else
       if( data_path_ready )

@@ -1,4 +1,4 @@
-module mat_transpose #(
+module px_to_cols #(
   parameter int PX_WIDTH = 8,
   // Only square matrices
   parameter int MAT_SIZE = 8

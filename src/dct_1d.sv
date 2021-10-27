@@ -46,7 +46,7 @@ localparam int MULT_WIDTH        = FIXED_POINT_INPUT ? PX_WIDTH + 1 : PX_WIDTH +
 // Multiplication result_width (-1 because we ommit sign in multiplication)
 localparam int MULT_RESULT_WIDTH = ( MULT_WIDTH - 1 ) * 2 + 1;
 localparam int PX_INT_WIDTH      = FIXED_POINT_INPUT ? PX_WIDTH - COEF_FRACT_WIDTH : PX_WIDTH;
-localparam int DCT_WIDTH         = ROUND_OUTPUT ? PX_WIDTH + 3 : MULT_WIDTH + 2;
+localparam int DCT_WIDTH         = ROUND_OUTPUT ? PX_INT_WIDTH + 3 : MULT_WIDTH + 2;
 localparam int DCT_TDATA_WIDTH   = ( DCT_WIDTH + 2 ) % 8 ?
                                    ( ( DCT_WIDTH + 2 ) / 8 + 1 ) * 8 :
                                    ( DCT_WIDTH + 2 );
@@ -149,21 +149,21 @@ always_ff @( posedge clk_i, posedge rst_i )
     mult_valid_pipe <= 5'd0;
   else
     if( data_path_ready )
-      mult_valid_pipe <= { mult_valid_pipe[2 : 0], dct_sel_run };
+      mult_valid_pipe <= { mult_valid_pipe[PIPE_LENGTH - 2 : 0], dct_sel_run };
 
 always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
     mult_tuser_pipe <= 5'd0;
   else
     if( data_path_ready )
-      mult_tuser_pipe <= { mult_tuser_pipe[2 : 0], cur_dct == 3'd0 && was_tuser };
+      mult_tuser_pipe <= { mult_tuser_pipe[PIPE_LENGTH - 2 : 0], cur_dct == 3'd0 && was_tuser };
 
 always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
     mult_tlast_pipe <= 5'd0;
   else
     if( data_path_ready )
-      mult_tlast_pipe <= { mult_tlast_pipe[2 : 0], cur_dct == 3'd7 && was_tlast };
+      mult_tlast_pipe <= { mult_tlast_pipe[PIPE_LENGTH - 2 : 0], cur_dct == 3'd7 && was_tlast };
 
 always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
@@ -275,16 +275,16 @@ assign dct_real = dct_sa[MULT_WIDTH + 1] ? -( int'( dct_sa[MULT_WIDTH : COEF_FRA
 generate
   if( ROUND_OUTPUT )
     begin : round_output
-      logic [PX_WIDTH + 2 : 0] round_output;
+      logic [PX_INT_WIDTH + 2 : 0] round_output;
       
       always_ff @( posedge clk_i, posedge rst_i )
         if( rst_i )
           round_output <= ( PX_WIDTH + 3 )'( 0 );
         else
-          if( dct[0] && !dct[COEF_FRACT_WIDTH - 2] )
+          if( dct[MULT_WIDTH + 1] && !dct[COEF_FRACT_WIDTH - 1] )
             round_output <= dct[MULT_WIDTH + 1 : COEF_FRACT_WIDTH] - 1'b1;
           else
-            if( !dct[0] && dct[COEF_FRACT_WIDTH - 1] )
+            if( !dct[MULT_WIDTH + 1] && dct[COEF_FRACT_WIDTH - 1] )
               round_output <= dct[MULT_WIDTH + 1 : COEF_FRACT_WIDTH] + 1'b1;
             else
               round_output <= dct[MULT_WIDTH + 1 : COEF_FRACT_WIDTH];

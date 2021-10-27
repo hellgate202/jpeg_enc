@@ -26,7 +26,7 @@ parameter int    PX_TDATA_WIDTH      = PX_WIDTH % 8 ?
                                        PX_WIDTH;
 parameter int    DCT_1D_WIDTH        = ROUND_1D_DCT ? PX_WIDTH + 3 : PX_WIDTH + COEF_FRACT_WIDTH + 3;
 parameter int    MULT_WIDTH          = ROUND_1D_DCT ? DCT_1D_WIDTH + COEF_FRACT_WIDTH + 1 : DCT_1D_WIDTH + 1;
-parameter int    DCT_2D_WIDTH        = ROUND_2D_DCT ? DCT_1D_WIDTH + 3 : MULT_WIDTH + 2;
+parameter int    DCT_2D_WIDTH        = ROUND_2D_DCT ? DCT_1D_WIDTH - COEF_FRACT_WIDTH + 3 : MULT_WIDTH + 2;
 parameter int    DCT_2D_TDATA_WIDTH  = DCT_2D_WIDTH % 8 ?
                                        ( DCT_2D_WIDTH / 8 + 1 ) * 8 :
                                        DCT_2D_WIDTH;
@@ -39,7 +39,11 @@ bit [7 : 0] pkt_byte_q [$];
 function automatic real dct_to_real( input bit [DCT_2D_WIDTH - 1 : 0] dct );
 
   bit [DCT_2D_WIDTH - 1 : 0] dct_sa = dct[DCT_2D_WIDTH - 1] ? { dct[DCT_2D_WIDTH - 1], ~dct[DCT_2D_WIDTH - 2 : 0] + 1'b1 } : dct;
-  dct_to_real = dct_sa[DCT_2D_WIDTH - 1] ? -( int'( dct_sa[DCT_2D_WIDTH - 2 : COEF_FRACT_WIDTH] ) + int'( dct_sa[COEF_FRACT_WIDTH - 1 : 0] ) / real'( 2 ** COEF_FRACT_WIDTH ) ) :
+  if( ROUND_2D_DCT )
+    dct_to_real = dct_sa[DCT_2D_WIDTH - 1] ? -( int'( dct_sa[DCT_2D_WIDTH - 2 : 0] ) ) :
+                                        int'( dct_sa[DCT_2D_WIDTH - 2 : 0] ); 
+  else
+    dct_to_real = dct_sa[DCT_2D_WIDTH - 1] ? -( int'( dct_sa[DCT_2D_WIDTH - 2 : COEF_FRACT_WIDTH] ) + int'( dct_sa[COEF_FRACT_WIDTH - 1 : 0] ) / real'( 2 ** COEF_FRACT_WIDTH ) ) :
                                         int'( dct_sa[DCT_2D_WIDTH - 2 : COEF_FRACT_WIDTH] ) + int'( dct_sa[COEF_FRACT_WIDTH - 1 : 0] ) / real'( 2 ** COEF_FRACT_WIDTH ); 
 
 endfunction
@@ -110,9 +114,9 @@ real real_q [$];
 
 task automatic recorder();
 
-  bit [7 : 0]                       rx_bytes [$];
-  bit [DCT_2D_TDATA_WIDTH - 1 : 0]  tdata;
-  bit [DCT_2D_WIDTH - 1 : 0] dct;
+  bit [7 : 0]                      rx_bytes [$];
+  bit [DCT_2D_TDATA_WIDTH - 1 : 0] tdata;
+  bit [DCT_2D_WIDTH - 1 : 0]       dct;
   forever
     begin
       if( rx_data_mbx.num() > 0 )
@@ -123,10 +127,7 @@ task automatic recorder();
               for( int i = 0; i < ( DCT_2D_TDATA_WIDTH / 8 ); i++ )
                 tdata[( i + 1 ) * 8 - 1 -: 8] = rx_bytes.pop_front();
               dct = tdata;
-              if( ROUND_2D_DCT )
-                real_q.push_back( real'( int'( dct ) ) );
-              else
-                real_q.push_back( dct_to_real( dct ) );
+              real_q.push_back( dct_to_real( dct ) );
             end
         end
       else

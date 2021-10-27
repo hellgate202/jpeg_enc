@@ -124,7 +124,6 @@ add wave -noupdate /tb_dct/DUT/dct_stage_2/mult_coef
 add wave -noupdate /tb_dct/DUT/dct_stage_2/mult_result
 add wave -noupdate /tb_dct/DUT/dct_stage_2/cut_tc
 add wave -noupdate /tb_dct/DUT/dct_stage_2/add_stage
-add wave -noupdate /tb_dct/DUT/dct_stage_2/dct
 add wave -noupdate /tb_dct/DUT/dct_stage_2/mult_ready
 add wave -noupdate /tb_dct/DUT/dct_stage_2/data_path_ready
 add wave -noupdate /tb_dct/DUT/dct_stage_2/mult_valid_pipe
@@ -134,13 +133,15 @@ add wave -noupdate /tb_dct/DUT/dct_stage_2/was_tuser
 add wave -noupdate /tb_dct/DUT/dct_stage_2/was_tlast
 add wave -noupdate /tb_dct/DUT/dct_stage_2/q_ptr
 add wave -noupdate /tb_dct/DUT/dct_stage_2/dct_sa
+add wave -noupdate /tb_dct/DUT/dct_stage_2/dct
 add wave -noupdate /tb_dct/DUT/dct_stage_2/dct_real
+add wave -noupdate -radix hexadecimal /tb_dct/DUT/dct_stage_2/round_output/round_output
 add wave -noupdate -divider DCT_O
 add wave -noupdate /tb_dct/dct_o/aclk
 add wave -noupdate /tb_dct/dct_o/aresetn
 add wave -noupdate /tb_dct/dct_o/tvalid
 add wave -noupdate /tb_dct/dct_o/tready
-add wave -noupdate /tb_dct/dct_o/tdata
+add wave -noupdate -radix hexadecimal /tb_dct/dct_o/tdata
 add wave -noupdate /tb_dct/dct_o/tstrb
 add wave -noupdate /tb_dct/dct_o/tkeep
 add wave -noupdate /tb_dct/dct_o/tlast
@@ -148,7 +149,7 @@ add wave -noupdate /tb_dct/dct_o/tid
 add wave -noupdate /tb_dct/dct_o/tdest
 add wave -noupdate /tb_dct/dct_o/tuser
 TreeUpdate [SetDefaultTree]
-WaveRestoreCursors {{Cursor 1} {28502733 ps} 0}
+WaveRestoreCursors {{Cursor 1} {28514153 ps} 0}
 quietly wave cursor active 1
 configure wave -namecolwidth 554
 configure wave -valuecolwidth 454
@@ -164,4 +165,4 @@ configure wave -griddelta 40
 configure wave -timeline 0
 configure wave -timelineunits ns
 update
-WaveRestoreZoom {0 ps} {1290045750 ps}
+WaveRestoreZoom {28486315 ps} {28569235 ps}

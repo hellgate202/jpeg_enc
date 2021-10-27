@@ -5,28 +5,31 @@ import dct_pkg::*;
 
 module tb_dct;
 
-parameter int    CLK_T              = 10_000;
-parameter int    PX_WIDTH           = 8;
-parameter int    FRAME_RES_X        = 1920;
-parameter int    FRAME_RES_Y        = 1080;
-parameter int    TOTAL_X            = 2200;
-parameter int    TOTAL_Y            = 1125;
-parameter string FILE_PATH          = "./img.hex";
-parameter int    RANDOM_TVALID      = 1;
-parameter int    RANDOM_TREADY      = 1;
-parameter int    TDATA_WIDTH        = PX_WIDTH % 8 ?
-                                      ( PX_WIDTH / 8 + 1 ) * 8 :
-                                      PX_WIDTH;
-parameter int    PREP_TDATA_WIDTH   = PX_WIDTH * 8;
-parameter int    DCT_WIDTH          = PX_WIDTH + 3 + COEF_FRACT_WIDTH;
-parameter int    DCT_TDATA_WIDTH    = DCT_WIDTH % 8 ?
-                                      ( DCT_WIDTH / 8 + 1 ) * 8 :
-                                      DCT_WIDTH;
-parameter int    PAR_TDATA_WIDTH    = DCT_WIDTH * 8;
-parameter int    DCT_2D_WIDTH       = DCT_WIDTH + 3;
-parameter int    DCT_2D_TDATA_WIDTH = DCT_2D_WIDTH % 8 ?
-                                      ( DCT_2D_WIDTH / 8 + 1 ) * 8 :
-                                      DCT_2D_WIDTH;
+parameter int    CLK_T               = 10_000;
+parameter int    PX_WIDTH            = 8;
+parameter int    FRAME_RES_X         = 1920;
+parameter int    FRAME_RES_Y         = 1080;
+parameter int    TOTAL_X             = 2200;
+parameter int    TOTAL_Y             = 1125;
+parameter string FILE_PATH           = "./img.hex";
+parameter int    RANDOM_TVALID       = 0;
+parameter int    RANDOM_TREADY       = 0;
+parameter int    PXTDATA_WIDTH       = PX_WIDTH % 8 ?
+                                       ( PX_WIDTH / 8 + 1 ) * 8 :
+                                       PX_WIDTH;
+parameter int    QUANTINIZATION      = 1;
+parameter int    ROUND_1D_DCT        = 0;
+parameter int    ROUND_2D_DCT        = 1;
+
+parameter int    PX_TDATA_WIDTH      = PX_WIDTH % 8 ?
+                                       ( PX_WIDTH / 8 + 1 ) * 8 :
+                                       PX_WIDTH;
+parameter int    DCT_1D_WIDTH        = ROUND_1D_DCT ? PX_WIDTH + 3 : PX_WIDTH + COEF_FRACT_WIDTH + 3;
+parameter int    MULT_WIDTH          = ROUND_1D_DCT ? DCT_1D_WIDTH + COEF_FRACT_WIDTH + 1 : DCT_1D_WIDTH + 1;
+parameter int    DCT_2D_WIDTH        = ROUND_2D_DCT ? DCT_1D_WIDTH + 3 : MULT_WIDTH + 2;
+parameter int    DCT_2D_TDATA_WIDTH  = DCT_2D_WIDTH % 8 ?
+                                       ( DCT_2D_WIDTH / 8 + 1 ) * 8 :
+                                       DCT_2D_WIDTH;
 
 bit clk;
 bit rst;
@@ -44,53 +47,13 @@ endfunction
 mailbox rx_data_mbx = new();
 
 axi4_stream_if #(
-  .TDATA_WIDTH ( TDATA_WIDTH ),
-  .TID_WIDTH   ( 1           ),
-  .TDEST_WIDTH ( 1           ),
-  .TUSER_WIDTH ( 1           )
+  .TDATA_WIDTH ( PX_TDATA_WIDTH ),
+  .TID_WIDTH   ( 1              ),
+  .TDEST_WIDTH ( 1              ),
+  .TUSER_WIDTH ( 1              )
 ) video_i (
-  .aclk        ( clk  ),
-  .aresetn     ( !rst )
-);
-
-axi4_stream_if #(
-  .TDATA_WIDTH ( TDATA_WIDTH ),
-  .TID_WIDTH   ( 1           ),
-  .TDEST_WIDTH ( 1           ),
-  .TUSER_WIDTH ( 1           )
-) parallel_video[7 : 0] (
-  .aclk        ( clk  ),
-  .aresetn     ( !rst )
-);
-
-axi4_stream_if #(
-  .TDATA_WIDTH ( PREP_TDATA_WIDTH ),
-  .TID_WIDTH   ( 1                ),
-  .TDEST_WIDTH ( 1                ),
-  .TUSER_WIDTH ( 1                )
-) prepared_video (
-  .aclk        ( clk              ),
-  .aresetn     ( !rst             )
-);
-
-axi4_stream_if #(
-  .TDATA_WIDTH ( DCT_TDATA_WIDTH ),
-  .TID_WIDTH   ( 1               ),
-  .TDEST_WIDTH ( 1               ),
-  .TUSER_WIDTH ( 1               )
-) dct_stream (
-  .aclk        ( clk             ),
-  .aresetn     ( !rst            )
-);
-
-axi4_stream_if #(
-  .TDATA_WIDTH ( PAR_TDATA_WIDTH ),
-  .TID_WIDTH   ( 1               ),
-  .TDEST_WIDTH ( 1               ),
-  .TUSER_WIDTH ( 1               )
-) col_dct_stream (
-  .aclk        ( clk             ),
-  .aresetn     ( !rst            )
+  .aclk        ( clk            ),
+  .aresetn     ( !rst           )
 );
 
 axi4_stream_if #(
@@ -98,7 +61,7 @@ axi4_stream_if #(
   .TID_WIDTH   ( 1                  ),
   .TDEST_WIDTH ( 1                  ),
   .TUSER_WIDTH ( 1                  )
-) dct_2d_stream (
+) dct_o (
   .aclk        ( clk                ),
   .aresetn     ( !rst               )
 );
@@ -160,7 +123,10 @@ task automatic recorder();
               for( int i = 0; i < ( DCT_2D_TDATA_WIDTH / 8 ); i++ )
                 tdata[( i + 1 ) * 8 - 1 -: 8] = rx_bytes.pop_front();
               dct = tdata;
-              real_q.push_back( dct_to_real( dct ) );
+              if( ROUND_2D_DCT )
+                real_q.push_back( real'( int'( dct ) ) );
+              else
+                real_q.push_back( dct_to_real( dct ) );
             end
         end
       else
@@ -196,66 +162,23 @@ task automatic check_data();
 
 endtask
 
-multiline_buf #(
-  .BUF_AMOUNT    ( 8              ),
-  .LINES_PER_BUF ( 2              ),
-  .PX_WIDTH      ( PX_WIDTH       ),
-  .FRAME_RES_X   ( FRAME_RES_X    )
-) pre_buf_inst (
-  .clk_i         ( clk            ),
-  .rst_i         ( rst            ),
-  .video_i       ( video_i        ),
-  .video_o       ( parallel_video )
+dct_2d #(
+  .PX_WIDTH       ( PX_WIDTH       ),
+  .FRAME_RES_X    ( FRAME_RES_X    ),
+  .QUANTINIZATION ( QUANTINIZATION ),
+  .ROUND_1D_DCT   ( ROUND_1D_DCT   ),
+  .ROUND_2D_DCT   ( ROUND_2D_DCT   )
+) DUT (
+  .clk_i          ( clk            ),
+  .rst_i          ( rst            ),
+  .video_i        ( video_i        ),
+  .dct_o          ( dct_o          )
 );
-
-px_to_dct_adapter #(
-  .PX_WIDTH    ( PX_WIDTH       )
-) adapter_inst (
-  .clk_i       ( clk            ),
-  .rst_i       ( rst            ),
-  .ser_video_i ( parallel_video ),
-  .par_video_o ( prepared_video )
-);
-
-dct_1d #(
-  .PX_WIDTH ( PX_WIDTH       )
-) dct_inst (
-  .clk_i    ( clk            ),
-  .rst_i    ( rst            ),
-  .video_i  ( prepared_video ),
-  .dct_o    ( dct_stream     )
-);
-
-px_to_cols #(
-  .PX_WIDTH ( DCT_WIDTH     ),
-  .MAT_SIZE ( 8             )
-) px_to_cols_inst (
-  .clk_i   ( clk            ),
-  .rst_i   ( rst            ),
-  .video_i ( dct_stream     ),
-  .video_o ( col_dct_stream )
-);
-
-dct_1d #(
-  .PX_WIDTH          ( DCT_WIDTH      ),
-  .FIXED_POINT_INPUT ( 1              ),
-  .QUANTINIZATION    ( 1              )
-) second_dct_inst (
-  .clk_i             ( clk            ),
-  .rst_i             ( rst            ),
-  .video_i           ( col_dct_stream ),
-  .dct_o             ( dct_2d_stream  )
-);
-
-real dct_from_parallel;
-
-always_comb
-  dct_from_parallel = dct_to_real( second_dct_inst.dct );
 
 initial
   begin
     video_source = new( video_i );
-    video_sink   = new( .axi4_stream_if_v ( dct_2d_stream ),
+    video_sink   = new( .axi4_stream_if_v ( dct_o       ),
                         .rx_data_mbx      ( rx_data_mbx )  );
     fork
       clk_gen();
@@ -267,7 +190,7 @@ initial
     video_source.run();
     repeat( 2 )
       begin
-        while( !( dct_2d_stream.tvalid && dct_2d_stream.tready && dct_2d_stream.tuser ) )
+        while( !( dct_o.tvalid && dct_o.tready && dct_o.tuser ) )
           @( posedge clk );
         @( posedge clk );
       end

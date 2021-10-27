@@ -7,4 +7,5 @@
 ../src/px_to_dct_adapter.sv
 ../src/px_to_cols.sv
 ../src/dct_1d.sv
+../src/dct_2d.sv
 ./tb_dct.sv

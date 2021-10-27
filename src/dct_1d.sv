@@ -30,7 +30,8 @@ import dct_pkg::*;
 module dct_1d #(
   parameter int PX_WIDTH          = 8,
   parameter int FIXED_POINT_INPUT = 0,
-  parameter int QUANTINIZATION    = 0 
+  parameter int QUANTINIZATION    = 0,
+  parameter int ROUND_OUTPUT      = 0 
 )(
   input                 clk_i,
   input                 rst_i,
@@ -45,10 +46,12 @@ localparam int MULT_WIDTH        = FIXED_POINT_INPUT ? PX_WIDTH + 1 : PX_WIDTH +
 // Multiplication result_width (-1 because we ommit sign in multiplication)
 localparam int MULT_RESULT_WIDTH = ( MULT_WIDTH - 1 ) * 2 + 1;
 localparam int PX_INT_WIDTH      = FIXED_POINT_INPUT ? PX_WIDTH - COEF_FRACT_WIDTH : PX_WIDTH;
-localparam int DCT_TDATA_WIDTH   = ( MULT_WIDTH + 2 ) % 8 ?
-                                   ( ( MULT_WIDTH + 2 ) / 8 + 1 ) * 8 :
-                                   ( MULT_WIDTH + 2 );
+localparam int DCT_WIDTH         = ROUND_OUTPUT ? PX_WIDTH + 3 : MULT_WIDTH + 2;
+localparam int DCT_TDATA_WIDTH   = ( DCT_WIDTH + 2 ) % 8 ?
+                                   ( ( DCT_WIDTH + 2 ) / 8 + 1 ) * 8 :
+                                   ( DCT_WIDTH + 2 );
 
+localparam int PIPE_LENGTH       = 4 + ROUND_OUTPUT;
 // Two's complement to sign + absolute value
 function logic [PX_WIDTH : 0] tc_to_sa( input logic [PX_WIDTH + 1 : 0] tc );
 
@@ -90,9 +93,9 @@ logic [1 : 0][MULT_WIDTH : 0]            add_stage;
 logic [MULT_WIDTH + 1 : 0]               dct;
 logic                                    mult_ready;
 logic                                    data_path_ready;
-logic [3 : 0]                            mult_valid_pipe;
-logic [3 : 0]                            mult_tlast_pipe;
-logic [3 : 0]                            mult_tuser_pipe;
+logic [PIPE_LENGTH - 1 : 0]              mult_valid_pipe;
+logic [PIPE_LENGTH - 1 : 0]              mult_tlast_pipe;
+logic [PIPE_LENGTH - 1 : 0]              mult_tuser_pipe;
 logic                                    was_tuser;
 logic                                    was_tlast;
 logic [2 : 0]                            q_ptr;
@@ -269,10 +272,34 @@ assign dct_real = dct_sa[MULT_WIDTH + 1] ? -( int'( dct_sa[MULT_WIDTH : COEF_FRA
                                             int'( dct_sa[MULT_WIDTH : COEF_FRACT_WIDTH] ) + int'( dct_sa[COEF_FRACT_WIDTH - 1 : 0] ) / real'( 2 ** COEF_FRACT_WIDTH ); 
 //synthesis translate_on
 
-assign dct_o.tdata  = DCT_TDATA_WIDTH'( dct );
-assign dct_o.tvalid = mult_valid_pipe[3];
-assign dct_o.tlast  = mult_tlast_pipe[3];
-assign dct_o.tuser  = mult_tuser_pipe[3];
+generate
+  if( ROUND_OUTPUT )
+    begin : round_output
+      logic [PX_WIDTH + 2 : 0] round_output;
+      
+      always_ff @( posedge clk_i, posedge rst_i )
+        if( rst_i )
+          round_output <= ( PX_WIDTH + 3 )'( 0 );
+        else
+          if( dct[0] && !dct[COEF_FRACT_WIDTH - 2] )
+            round_output <= dct[MULT_WIDTH + 1 : COEF_FRACT_WIDTH] - 1'b1;
+          else
+            if( !dct[0] && dct[COEF_FRACT_WIDTH - 1] )
+              round_output <= dct[MULT_WIDTH + 1 : COEF_FRACT_WIDTH] + 1'b1;
+            else
+              round_output <= dct[MULT_WIDTH + 1 : COEF_FRACT_WIDTH];
+
+      assign dct_o.tdata = DCT_TDATA_WIDTH'( round_output );
+    end
+  else
+    begin : fixed_output
+      assign dct_o.tdata  = DCT_TDATA_WIDTH'( dct );
+    end
+endgenerate
+
+assign dct_o.tvalid = mult_valid_pipe[PIPE_LENGTH - 1];
+assign dct_o.tlast  = mult_tlast_pipe[PIPE_LENGTH - 1];
+assign dct_o.tuser  = mult_tuser_pipe[PIPE_LENGTH - 1];
 assign dct_o.tkeep  = '1;
 assign dct_o.tstrb  = '1;
 

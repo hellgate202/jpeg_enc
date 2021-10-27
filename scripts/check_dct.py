@@ -36,6 +36,7 @@ dct_array = np.reshape( dct_array, px_amount )
 
 packed_dct_array = np.zeros( ( pack_8_amounts, 8 ) )
 dct_2d_array = np.zeros( ( pack_8_amounts, 8 ) )
+q_array = np.zeros( ( pack_8_amounts, 8 ) )
 
 for i in range( int( len( dct_array ) / 8 ) ):
   for j in range( 8 ):
@@ -44,6 +45,21 @@ for i in range( int( len( dct_array ) / 8 ) ):
 for i in range( len( packed_dct_array ) ):
   dct_2d_array[i] = dct( packed_dct_array[i], type=2, norm="ortho" )
 
-dct_2d_array = np.reshape( dct_2d_array, px_amount );
+q_mat = np.array([[16, 11, 10, 16, 24, 40, 51, 61],
+                  [12, 12, 14, 19, 26, 58, 60, 55],
+                  [14, 13, 16, 24, 40, 57, 69, 56],
+                  [14, 17, 22, 29, 51, 87, 80, 62],
+                  [18, 22, 37, 56, 68, 109, 103, 77],
+                  [24, 35, 55, 64, 81, 104, 113, 92],
+                  [49, 64, 78, 87, 103, 121, 120, 101],
+                  [72, 92, 95, 98, 112, 100, 103, 99]])
 
-np.savetxt( '../tb/ref.hex', dct_2d_array, delimiter='\n', fmt='%1.3f')
+q_mat_t = np.transpose( q_mat );
+
+for i in range( len( dct_2d_array ) ):
+  q_array[i] = np.divide( dct_2d_array[i], q_mat_t[i % 8] )
+
+
+q_array = np.reshape( q_array, px_amount );
+
+np.savetxt( '../tb/ref.hex', q_array, delimiter='\n', fmt='%1.3f')

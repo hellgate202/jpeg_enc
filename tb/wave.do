@@ -45,6 +45,7 @@ add wave -noupdate /tb_dct/DUT/dct_stage_1/was_tlast
 add wave -noupdate /tb_dct/DUT/dct_stage_1/q_ptr
 add wave -noupdate /tb_dct/DUT/dct_stage_1/dct_sa
 add wave -noupdate /tb_dct/DUT/dct_stage_1/dct_real
+add wave -noupdate /dct_pkg::Q_MIN
 TreeUpdate [SetDefaultTree]
 WaveRestoreCursors {{Cursor 1} {738592920 ps} 0}
 quietly wave cursor active 1
@@ -62,4 +63,4 @@ configure wave -griddelta 40
 configure wave -timeline 0
 configure wave -timelineunits ns
 update
-WaveRestoreZoom {0 ps} {2122569750 ps}
+WaveRestoreZoom {0 ps} {2122548750 ps}

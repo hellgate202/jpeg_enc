@@ -106,4 +106,17 @@ endfunction
 
 parameter bit [7 : 0][7 : 0][3 : 0][COEF_WIDTH - 1 : 0] Q_COEFS = gen_q_coefs();
 
+function bit [7 : 0] find_min( input bit [7 : 0][7 : 0][7 : 0] q_mat );
+
+  find_min = 8'd255;
+
+  for( int i = 0; i < 8; i++ )
+    for( int j = 0; j < 8; j++ )
+      if( q_mat[i][j] < find_min )
+        find_min = q_mat[i][j];
+
+endfunction
+
+parameter int Q_MIN = find_min( Q_MAT );
+
 endpackage

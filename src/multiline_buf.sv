@@ -59,15 +59,6 @@ axi4_stream_if #(
   .aresetn     ( !rst_i      )
 );
 
-axi4_stream_if #(
-  .TDATA_WIDTH ( TDATA_WIDTH ),
-  .TUSER_WIDTH ( 1           ),
-  .TDEST_WIDTH ( 1           ),
-  .TID_WIDTH   ( 1           )
-) post_buf_if[BUF_AMOUNT - 1 : 0] (
-  .aclk        ( clk_i       ),
-  .aresetn     ( !rst_i      )
-);
 generate
   for( g = 0; g < BUF_AMOUNT; g++ )
     begin : pre_buf_if_assignment
@@ -92,7 +83,10 @@ generate
         .TDEST_WIDTH   ( 1             ),
         .TID_WIDTH     ( 1             ),
         .WORDS_AMOUNT  ( FIFO_DEPTH    ),
-        .SMART         ( 0             )
+        .SMART         ( 0             ),
+        .MEM_OPT       ( 1             ),
+        .MAX_PKTS      ( 2             ),
+        .MAX_PKT_SIZE  ( FRAME_RES_X   )
       ) line_buffer_inst (
         .clk_i         ( clk_i         ),
         .rst_i         ( rst_i         ),

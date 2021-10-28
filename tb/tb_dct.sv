@@ -18,18 +18,21 @@ parameter int    PXTDATA_WIDTH       = PX_WIDTH % 8 ?
                                        ( PX_WIDTH / 8 + 1 ) * 8 :
                                        PX_WIDTH;
 parameter int    QUANTINIZATION      = 1;
-parameter int    ROUND_1D_DCT        = 0;
+parameter int    ROUND_1D_DCT        = 1;
 parameter int    ROUND_2D_DCT        = 1;
 
 parameter int    PX_TDATA_WIDTH      = PX_WIDTH % 8 ?
                                        ( PX_WIDTH / 8 + 1 ) * 8 :
                                        PX_WIDTH;
 parameter int    DCT_1D_WIDTH        = ROUND_1D_DCT ? PX_WIDTH + 3 : PX_WIDTH + COEF_FRACT_WIDTH + 3;
-parameter int    MULT_WIDTH          = ROUND_1D_DCT ? DCT_1D_WIDTH + COEF_FRACT_WIDTH + 1 : DCT_1D_WIDTH + 1;
-parameter int    DCT_2D_WIDTH        = ROUND_2D_DCT ? DCT_1D_WIDTH - COEF_FRACT_WIDTH + 3 : MULT_WIDTH + 2;
+parameter int    DCT_2D_WIDTH        = ROUND_1D_DCT && !ROUND_2D_DCT ? DCT_1D_WIDTH + COEF_FRACT_WIDTH + 3 :
+                                       !ROUND_1D_DCT && ROUND_2D_DCT ? DCT_1D_WIDTH - COEF_FRACT_WIDTH + 3 :
+                                                                       DCT_1D_WIDTH + 3;
 parameter int    DCT_2D_TDATA_WIDTH  = DCT_2D_WIDTH % 8 ?
                                        ( DCT_2D_WIDTH / 8 + 1 ) * 8 :
                                        DCT_2D_WIDTH;
+parameter int    CHECK_ACCURACY      = 1;
+parameter real   ACCURACY_THRESHOLD  = 2.0;
 
 bit clk;
 bit rst;
@@ -142,6 +145,10 @@ task automatic check_data();
 
   int fd = $fopen( "./ref.hex", "r" );
   string line;
+  real abs;
+  real max_error;
+  real acc_error;
+  real mean_error;
 
   while( !$feof( fd ) )
     begin
@@ -152,13 +159,23 @@ task automatic check_data();
   ref_real_q.pop_back();
   for( int i = 0; i < ref_real_q.size(); i++ )
     begin
-      if( ( ref_real_q[i] - real_q[i] ) > 1.0 || ( ref_real_q[i] - real_q[i] ) < -1.0 )
+      if( ( ref_real_q[i] - real_q[i] ) > 0 )
+        abs = ref_real_q[i] - real_q[i];
+      else
+        abs = -( ref_real_q[i] - real_q[i] );
+      acc_error += abs;
+      if( abs > max_error )
+        max_error = abs;
+      if( ( abs > ACCURACY_THRESHOLD ) && CHECK_ACCURACY )
         begin
           $display( "Error!" );
           $display( "Position #%0d: FPGA: %1.3f, Python %1.3f", i, real_q[i], ref_real_q[i] );
           $stop();
         end
     end
+  mean_error = acc_error / ref_real_q.size();
+  $display( "Maximum error was %1.3f", max_error );
+  $display( "Mean error was %1.3f", mean_error );
   $fclose( fd );
 
 endtask

@@ -281,13 +281,11 @@ generate
         if( rst_i )
           round_output <= ( PX_WIDTH + 3 )'( 0 );
         else
-          if( dct[MULT_WIDTH + 1] && !dct[COEF_FRACT_WIDTH - 1] )
-            round_output <= dct[MULT_WIDTH + 1 : COEF_FRACT_WIDTH] - 1'b1;
+          if( dct[MULT_WIDTH + 1] && !dct[COEF_FRACT_WIDTH - 2] ||
+              !dct[MULT_WIDTH - 1] && dct[COEF_FRACT_WIDTH - 1] )
+            round_output <= dct[MULT_WIDTH + 1 : COEF_FRACT_WIDTH] + 1'b1;
           else
-            if( !dct[MULT_WIDTH + 1] && dct[COEF_FRACT_WIDTH - 1] )
-              round_output <= dct[MULT_WIDTH + 1 : COEF_FRACT_WIDTH] + 1'b1;
-            else
-              round_output <= dct[MULT_WIDTH + 1 : COEF_FRACT_WIDTH];
+            round_output <= dct[MULT_WIDTH + 1 : COEF_FRACT_WIDTH];
 
       assign dct_o.tdata = DCT_TDATA_WIDTH'( round_output );
     end

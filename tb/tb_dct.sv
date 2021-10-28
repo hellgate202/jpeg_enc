@@ -18,8 +18,8 @@ parameter int    PXTDATA_WIDTH       = PX_WIDTH % 8 ?
                                        ( PX_WIDTH / 8 + 1 ) * 8 :
                                        PX_WIDTH;
 parameter int    QUANTINIZATION      = 1;
-parameter int    ROUND_1D_DCT        = 1;
-parameter int    ROUND_2D_DCT        = 1;
+parameter int    ROUND_1D_DCT        = 0;
+parameter int    ROUND_2D_DCT        = 0;
 
 parameter int    PX_TDATA_WIDTH      = PX_WIDTH % 8 ?
                                        ( PX_WIDTH / 8 + 1 ) * 8 :

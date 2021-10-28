@@ -15,7 +15,7 @@ parameter bit [7 : 0][7 : 0][7 : 0] Q_MAT = '{ '{ 16, 11, 10, 16, 24, 40, 51, 61
 
 parameter int COEF_WIDTH = COEF_FRACT_WIDTH + 1; //for sign
 
-function bit [7 : 0][7 : 0][7 : 0] reverse_quant_mat ( bit [7 : 0][7 : 0][7 : 0] q_mat );
+function bit [7 : 0][7 : 0][7 : 0] reverse_quant_mat ( input bit [7 : 0][7 : 0][7 : 0] q_mat );
 
   for( int i = 0; i < 8; i++ )
     for( int j = 0; j < 8; j++ )

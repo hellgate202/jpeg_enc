@@ -43,8 +43,7 @@ module dct_1d #(
 
 // Size of variable before multiplication
 localparam int MULT_WIDTH        = FIXED_POINT_INPUT ? PX_WIDTH + 1 : PX_WIDTH + 1 + COEF_FRACT_WIDTH;
-// Multiplication result_width (-1 because we ommit sign in multiplication)
-localparam int MULT_RESULT_WIDTH = ( MULT_WIDTH - 1 ) * 2 + 1;
+localparam int MULT_RESULT_WIDTH = MULT_WIDTH + COEF_FRACT_WIDTH + 1;
 localparam int PX_INT_WIDTH      = FIXED_POINT_INPUT ? PX_WIDTH - COEF_FRACT_WIDTH : PX_WIDTH;
 localparam int DCT_WIDTH         = ROUND_OUTPUT ? PX_INT_WIDTH + 3 : MULT_WIDTH + 2;
 localparam int DCT_TDATA_WIDTH   = ( DCT_WIDTH + 2 ) % 8 ?
@@ -86,7 +85,7 @@ logic                                    dct_sel_run;
 logic [7 : 0][PX_WIDTH : 0]              px_delta;
 logic [7 : 0][PX_WIDTH : 0]              px_delta_sa;
 logic [3 : 0][MULT_WIDTH - 1 : 0]        mult_px;
-logic [3 : 0][MULT_WIDTH - 1 : 0]        mult_coef;
+logic [3 : 0][COEF_FRACT_WIDTH + 1 : 0]  mult_coef;
 logic [3 : 0][MULT_RESULT_WIDTH - 1 : 0] mult_result;
 logic [3 : 0][MULT_WIDTH - 1 : 0]        cut_tc;
 logic [1 : 0][MULT_WIDTH : 0]            add_stage;
@@ -214,9 +213,9 @@ always_ff @( posedge clk_i, posedge rst_i )
               else
                 mult_px[j]   <= { px_delta_sa[j * 2 + i % 2], COEF_FRACT_WIDTH'( 0 ) };
               if( QUANTINIZATION )
-                mult_coef[j] <= { Q_COEFS[q_ptr][i][j][COEF_FRACT_WIDTH], ( PX_INT_WIDTH )'( 0 ), Q_COEFS[q_ptr][i][j][COEF_FRACT_WIDTH - 1 : 0] };
+                mult_coef[j] <= { Q_COEFS[q_ptr][i][j][COEF_FRACT_WIDTH], 1'b0, Q_COEFS[q_ptr][i][j][COEF_FRACT_WIDTH - 1 : 0] };
               else
-                mult_coef[j] <= { COEFS[i][j][COEF_FRACT_WIDTH], ( PX_INT_WIDTH )'( 0 ), COEFS[i][j][COEF_FRACT_WIDTH - 1 : 0] };
+                mult_coef[j] <= { COEFS[i][j][COEF_FRACT_WIDTH], 1'b0, COEFS[i][j][COEF_FRACT_WIDTH - 1 : 0] };
             end
 
 // Performing multiplications and restoring sign
@@ -228,8 +227,8 @@ always_ff @( posedge clk_i, posedge rst_i )
     if( data_path_ready )
       for( int i = 0; i < 4; i++ )
         begin
-          mult_result[i] <= mult_px[i][MULT_WIDTH - 2 : 0] * mult_coef[i][MULT_WIDTH - 2 : 0];
-          mult_result[i][MULT_RESULT_WIDTH - 1] <= mult_px[i][MULT_WIDTH - 1] ^ mult_coef[i][MULT_WIDTH - 1];
+          mult_result[i] <= mult_px[i][MULT_WIDTH - 2 : 0] * mult_coef[i][COEF_FRACT_WIDTH : 0];
+          mult_result[i][MULT_RESULT_WIDTH - 1] <= mult_px[i][MULT_WIDTH - 1] ^ mult_coef[i][COEF_FRACT_WIDTH + 1];
         end
 
 
@@ -237,7 +236,7 @@ always_ff @( posedge clk_i, posedge rst_i )
 always_comb
   for( int i = 0; i < 4; i++ )
     cut_tc[i] = sa_to_tc( { mult_result[i][MULT_RESULT_WIDTH - 1], 
-                            mult_result[i][MULT_RESULT_WIDTH - PX_INT_WIDTH - 2 : COEF_FRACT_WIDTH] } );
+                            mult_result[i][MULT_RESULT_WIDTH - 3 : COEF_FRACT_WIDTH] } );
 
 // To get DCT value we need to sum all products
 always_ff @( posedge clk_i, posedge rst_i )

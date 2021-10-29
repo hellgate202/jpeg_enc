@@ -7,18 +7,25 @@ module zig_zag #(
   axi4_stream_if.master zz_o
 );
 
+localparam int DCT_TDATA_WIDTH = DCT_WIDTH % 8 ?
+                                 ( DCT_WIDTH / 8 + 1 ) * 8 :
+                                 DCT_WIDTH;
+
 logic [7 : 0][DCT_WIDTH - 1 : 0]  input_buf;
 logic [63 : 0][DCT_WIDTH - 1 : 0] zz_buf;
 logic [63 : 0][DCT_WIDTH - 1 : 0] output_buf;
 logic [2 : 0]                     input_buf_cnt;
 logic [2 : 0]                     px_cnt;
 logic [5 : 0]                     output_cnt;
-logic                             output_buf_empty;
-logic                             input_buf_full;
+logic                             load_input_buf;
+logic                             output_buf_empty, output_buf_empty_comb;
+logic                             input_buf_full, input_buf_full_comb;
 logic                             tlast_lock;
+logic                             tlast_buf;
 logic                             tuser_lock;
+logic                             tuser_buf;
 
-assign dct_i.tready = input_buf_full;
+assign dct_i.tready = !( input_buf_full && !output_buf_empty );
 
 always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
@@ -35,9 +42,15 @@ always_ff @( posedge clk_i, posedge rst_i )
 
 always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
+    load_input_buf <= 1'b0;
+  else
+    load_input_buf <= dct_i.tvalid && dct_i.tready && &px_cnt;
+
+always_ff @( posedge clk_i, posedge rst_i )
+  if( rst_i )
     input_buf_cnt <= 3'd0;
   else
-    if( dct_i.tvalid && dct_i.tready && &px_cnt )
+    if( load_input_buf )
       input_buf_cnt <= input_buf_cnt + 1'b1;
 
 always_ff @( posedge clk_i, posedge rst_i )
@@ -47,7 +60,7 @@ always_ff @( posedge clk_i, posedge rst_i )
     if( dct_i.tvalid && dct_i.tready && dct_i.tlast )
       tlast_lock <= 1'b1;
     else
-      if( &output_cnt && zz_o.tready )
+      if( load_input_buf && &input_buf_cnt )
         tlast_lock <= 1'b0;
 
 always_ff @( posedge clk_i, posedge rst_i )
@@ -57,14 +70,34 @@ always_ff @( posedge clk_i, posedge rst_i )
     if( dct_i.tvalid && dct_i.tready && dct_i.tuser )
       tuser_lock <= 1'b1;
     else
-      if( ~|output_cnt && !output_buf_empty )
+      if( load_input_buf && &input_buf_cnt )
         tuser_lock <= 1'b0;
+
+always_ff @( posedge clk_i, posedge rst_i )
+  if( rst_i )
+    tlast_buf <= 1'b0;
+  else
+    if( load_input_buf )
+      tlast_buf <= tlast_lock;
+    else
+      if( &output_cnt && zz_o.tready )
+        tlast_buf <= 1'b0;
+
+always_ff @( posedge clk_i, posedge rst_i )
+  if( rst_i )
+    tuser_buf <= 1'b0;
+  else
+    if( load_input_buf )
+      tuser_buf <= tuser_lock;
+    else
+      if( !output_buf_empty && zz_o.tready )
+        tuser_buf <= 1'b0;
 
 always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
     zz_buf <= ( 64 * DCT_WIDTH )'( 0 );
   else
-    if( dct_i.tvalid && dct_i.tready && &px_cnt )
+    if( load_input_buf )
       case( input_buf_cnt )
         3'd0:
           begin
@@ -160,13 +193,14 @@ always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
     output_buf <= ( 64 * DCT_WIDTH )'( 0 );
   else
-    if( output_buf_empty && ( input_buf_full || &px_cnt && &input_buf_cnt && dct_i.tvalid ) )
+    if( ( output_buf_empty || &output_cnt && zz_o.tready ) && 
+        ( input_buf_full || &px_cnt && &input_buf_cnt && dct_i.tvalid ) )
       output_buf <= zz_buf;
     else
       if( zz_o.tready )
         output_buf <= { DCT_WIDTH'( 0 ), output_buf[63 : 1] };
 
-always_ff @( posedge clk_i, posedge rst_i 0
+always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
     output_cnt <= 6'd0;
   else
@@ -180,27 +214,39 @@ always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
     output_buf_empty <= 1'b1;
   else
-    if( dct_i.tvalid && &px_cnt && &input_buf_cnt )
-      output_buf_empty <= 1'b0;
+    output_buf_empty <= output_buf_empty_comb;
+
+always_comb
+  begin
+    output_buf_empty_comb = output_buf_empty;
+    if( input_buf_full || &px_cnt && &input_buf_cnt && dct_i.tvalid )
+      output_buf_empty_comb = 1'b0;
     else
       if( &output_cnt && zz_o.tready )
-        output_buf_empty <= 1'b1;
+        output_buf_empty_comb = 1'b1;
+  end
 
 always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
     input_buf_full <= 1'b0;
   else
-    if( &px_cnt && &input_buf_cnt && dct_i.tvalid && !output_buf_empty )
-      input_buf_full <= 1'b1;
-    else
-      if( output_buf_empty )
-        input_buf_full <= 1'b0;
+    input_buf_full <= input_buf_full_comb;
 
-assign zz_o.tdata  = output_buf[0];
+always_comb
+  begin
+    input_buf_full_comb = input_buf_full;
+    if( output_buf_empty || &output_cnt && zz_o.tready )
+      input_buf_full_comb = 1'b0;
+    else
+      if( &px_cnt && &input_buf_cnt && dct_i.tvalid )
+        input_buf_full_comb = 1'b1;
+  end
+
+assign zz_o.tdata  = DCT_TDATA_WIDTH'( output_buf[0] );
 assign zz_o.tvalid = !output_buf_empty;
 assign zz_o.tstrb  = '1;
 assign zz_o.tkeep  = '1;
-assign zz_o.tlast  = tlast_lock && &output_cnt && zz_o.tready;
-assign zz_o.tlast  = tuser_lock && ~|output_cnt && !output_buf_empty;
+assign zz_o.tlast  = tlast_buf && &output_cnt;
+assign zz_o.tuser  = tuser_buf && ~|output_cnt && !output_buf_empty;
 
 endmodule

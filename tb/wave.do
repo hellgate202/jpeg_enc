@@ -22,32 +22,36 @@ add wave -noupdate /tb_dct/dct_o/tlast
 add wave -noupdate /tb_dct/dct_o/tid
 add wave -noupdate /tb_dct/dct_o/tdest
 add wave -noupdate /tb_dct/dct_o/tuser
-add wave -noupdate /tb_dct/DUT/dct_stage_1/clk_i
-add wave -noupdate /tb_dct/DUT/dct_stage_1/rst_i
-add wave -noupdate /tb_dct/DUT/dct_stage_1/px_unpack
-add wave -noupdate /tb_dct/DUT/dct_stage_1/cur_dct
-add wave -noupdate /tb_dct/DUT/dct_stage_1/dct_sel_run
-add wave -noupdate /tb_dct/DUT/dct_stage_1/px_delta
-add wave -noupdate /tb_dct/DUT/dct_stage_1/px_delta_sa
-add wave -noupdate /tb_dct/DUT/dct_stage_1/mult_px
-add wave -noupdate /tb_dct/DUT/dct_stage_1/mult_coef
-add wave -noupdate /tb_dct/DUT/dct_stage_1/mult_result
-add wave -noupdate /tb_dct/DUT/dct_stage_1/cut_tc
-add wave -noupdate /tb_dct/DUT/dct_stage_1/add_stage
-add wave -noupdate /tb_dct/DUT/dct_stage_1/dct
-add wave -noupdate /tb_dct/DUT/dct_stage_1/mult_ready
-add wave -noupdate /tb_dct/DUT/dct_stage_1/data_path_ready
-add wave -noupdate /tb_dct/DUT/dct_stage_1/mult_valid_pipe
-add wave -noupdate /tb_dct/DUT/dct_stage_1/mult_tlast_pipe
-add wave -noupdate /tb_dct/DUT/dct_stage_1/mult_tuser_pipe
-add wave -noupdate /tb_dct/DUT/dct_stage_1/was_tuser
-add wave -noupdate /tb_dct/DUT/dct_stage_1/was_tlast
-add wave -noupdate /tb_dct/DUT/dct_stage_1/q_ptr
-add wave -noupdate /tb_dct/DUT/dct_stage_1/dct_sa
-add wave -noupdate /tb_dct/DUT/dct_stage_1/dct_real
-add wave -noupdate /dct_pkg::Q_MIN
+add wave -noupdate /tb_dct/zz_inst/clk_i
+add wave -noupdate /tb_dct/zz_inst/rst_i
+add wave -noupdate /tb_dct/zz_inst/input_buf
+add wave -noupdate /tb_dct/zz_inst/zz_buf
+add wave -noupdate /tb_dct/zz_inst/output_buf
+add wave -noupdate /tb_dct/zz_inst/input_buf_cnt
+add wave -noupdate /tb_dct/zz_inst/px_cnt
+add wave -noupdate /tb_dct/zz_inst/output_cnt
+add wave -noupdate /tb_dct/zz_inst/load_input_buf
+add wave -noupdate /tb_dct/zz_inst/output_buf_empty
+add wave -noupdate /tb_dct/zz_inst/output_buf_empty_comb
+add wave -noupdate /tb_dct/zz_inst/input_buf_full
+add wave -noupdate /tb_dct/zz_inst/input_buf_full_comb
+add wave -noupdate /tb_dct/zz_inst/tlast_lock
+add wave -noupdate /tb_dct/zz_inst/tlast_buf
+add wave -noupdate /tb_dct/zz_inst/tuser_lock
+add wave -noupdate /tb_dct/zz_inst/tuser_buf
+add wave -noupdate /tb_dct/zz/aclk
+add wave -noupdate /tb_dct/zz/aresetn
+add wave -noupdate /tb_dct/zz/tvalid
+add wave -noupdate /tb_dct/zz/tready
+add wave -noupdate /tb_dct/zz/tdata
+add wave -noupdate /tb_dct/zz/tstrb
+add wave -noupdate /tb_dct/zz/tkeep
+add wave -noupdate /tb_dct/zz/tlast
+add wave -noupdate /tb_dct/zz/tid
+add wave -noupdate /tb_dct/zz/tdest
+add wave -noupdate /tb_dct/zz/tuser
 TreeUpdate [SetDefaultTree]
-WaveRestoreCursors {{Cursor 1} {738592920 ps} 0}
+WaveRestoreCursors {{Cursor 1} {851536119 ps} 0}
 quietly wave cursor active 1
 configure wave -namecolwidth 477
 configure wave -valuecolwidth 454
@@ -63,4 +67,4 @@ configure wave -griddelta 40
 configure wave -timeline 0
 configure wave -timelineunits ns
 update
-WaveRestoreZoom {0 ps} {2122548750 ps}
+WaveRestoreZoom {0 ps} {3189086250 ps}

@@ -8,4 +8,5 @@
 ../src/px_to_cols.sv
 ../src/dct_1d.sv
 ../src/dct_2d.sv
+../src/zig_zag.sv
 ./tb_dct.sv

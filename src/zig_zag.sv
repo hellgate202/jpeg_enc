@@ -190,7 +190,7 @@ always_ff @( posedge clk_i, posedge rst_i )
           end
       endcase
 
-assign load_output_buf = ( output_buf_empty || output_cnt && zz_o.tready ) && input_buf_full;
+assign load_output_buf = ( output_buf_empty || &output_cnt && zz_o.tready ) && input_buf_full;
 
 always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )

@@ -59,7 +59,82 @@ q_mat_t = np.transpose( q_mat );
 for i in range( len( dct_2d_array ) ):
   q_array[i] = np.divide( dct_2d_array[i], q_mat_t[i % 8] )
 
+zz_array = np.zeros( ( pack_8_amounts, 8 ) )
 
-q_array = np.reshape( q_array, px_amount );
+for i in range( len( dct_2d_array ) ):
+  if( ( i % 8 ) == 0 ):
+    zz_array[i][0]     = q_array[i][0]
+    zz_array[i][2]     = q_array[i][1]
+    zz_array[i][3]     = q_array[i][2]
+    zz_array[i + 1][1] = q_array[i][3]
+    zz_array[i + 1][2] = q_array[i][4]
+    zz_array[i + 2][4] = q_array[i][5]
+    zz_array[i + 2][5] = q_array[i][6]
+    zz_array[i + 4][3] = q_array[i][7]
+  elif( ( i % 8 ) == 1 ):
+    zz_array[i - 1][1] = q_array[i][0]
+    zz_array[i - 1][4] = q_array[i][1]
+    zz_array[i][0]     = q_array[i][2]
+    zz_array[i][3]     = q_array[i][3]
+    zz_array[i + 1][3] = q_array[i][4]
+    zz_array[i + 1][6] = q_array[i][5]
+    zz_array[i + 3][2] = q_array[i][6]
+    zz_array[i + 3][4] = q_array[i][7]
+  elif( ( i % 8 ) == 2 ):
+    zz_array[i - 2][5] = q_array[i][0]
+    zz_array[i - 2][7] = q_array[i][1]
+    zz_array[i - 1][4] = q_array[i][2]
+    zz_array[i][2]     = q_array[i][3]
+    zz_array[i][7]     = q_array[i][4]
+    zz_array[i + 2][1] = q_array[i][5]
+    zz_array[i + 2][5] = q_array[i][6]
+    zz_array[i + 4][0] = q_array[i][7]
+  elif( ( i % 8 ) == 3 ):
+    zz_array[i - 3][6] = q_array[i][0]
+    zz_array[i - 2][5] = q_array[i][1]
+    zz_array[i - 1][1] = q_array[i][2]
+    zz_array[i][0]     = q_array[i][3]
+    zz_array[i + 1][0] = q_array[i][4]
+    zz_array[i + 1][6] = q_array[i][5]
+    zz_array[i + 2][7] = q_array[i][6]
+    zz_array[i + 3][1] = q_array[i][7]
+  elif( ( i % 8 ) == 4 ):
+    zz_array[i - 3][6] = q_array[i][0]
+    zz_array[i - 2][0] = q_array[i][1]
+    zz_array[i - 1][1] = q_array[i][2]
+    zz_array[i - 1][7] = q_array[i][3]
+    zz_array[i][7]     = q_array[i][4]
+    zz_array[i + 1][6] = q_array[i][5]
+    zz_array[i + 2][2] = q_array[i][6]
+    zz_array[i + 3][1] = q_array[i][7]
+  elif( ( i % 8 ) == 5 ):
+    zz_array[i - 4][7] = q_array[i][0]
+    zz_array[i - 2][2] = q_array[i][1]
+    zz_array[i - 2][6] = q_array[i][2]
+    zz_array[i][0]     = q_array[i][3]
+    zz_array[i][5]     = q_array[i][4]
+    zz_array[i + 1][3] = q_array[i][5]
+    zz_array[i + 2][0] = q_array[i][6]
+    zz_array[i + 2][2] = q_array[i][7]
+  elif( ( i % 8 ) == 6 ):
+    zz_array[i - 3][3] = q_array[i][0]
+    zz_array[i - 3][5] = q_array[i][1]
+    zz_array[i - 1][1] = q_array[i][2]
+    zz_array[i - 1][4] = q_array[i][3]
+    zz_array[i][4]     = q_array[i][4]
+    zz_array[i][7]     = q_array[i][5]
+    zz_array[i + 1][3] = q_array[i][6]
+    zz_array[i + 1][6] = q_array[i][7]
+  else:
+    zz_array[i - 4][4] = q_array[i][0]
+    zz_array[i - 2][2] = q_array[i][1]
+    zz_array[i - 2][3] = q_array[i][2]
+    zz_array[i - 1][5] = q_array[i][3]
+    zz_array[i - 1][6] = q_array[i][4]
+    zz_array[i][4] = q_array[i][5]
+    zz_array[i][5] = q_array[i][6]
+    zz_array[i][7] = q_array[i][7]
 
-np.savetxt( '../tb/ref.hex', q_array, delimiter='\n', fmt='%1.3f')
+zz_array = np.reshape( zz_array, px_amount );
+
+np.savetxt( '../tb/ref.hex', zz_array, delimiter='\n', fmt='%1.3f')

@@ -24,13 +24,14 @@ add wave -noupdate /tb_dct/dct_o/tdest
 add wave -noupdate /tb_dct/dct_o/tuser
 add wave -noupdate /tb_dct/zz_inst/clk_i
 add wave -noupdate /tb_dct/zz_inst/rst_i
-add wave -noupdate /tb_dct/zz_inst/input_buf
-add wave -noupdate /tb_dct/zz_inst/zz_buf
-add wave -noupdate /tb_dct/zz_inst/output_buf
+add wave -noupdate -radix decimal /tb_dct/zz_inst/input_buf
+add wave -noupdate -radix decimal /tb_dct/zz_inst/zz_buf
+add wave -noupdate -radix decimal /tb_dct/zz_inst/output_buf
 add wave -noupdate /tb_dct/zz_inst/input_buf_cnt
 add wave -noupdate /tb_dct/zz_inst/px_cnt
 add wave -noupdate /tb_dct/zz_inst/output_cnt
 add wave -noupdate /tb_dct/zz_inst/load_input_buf
+add wave -noupdate /tb_dct/zz_inst/load_output_buf
 add wave -noupdate /tb_dct/zz_inst/output_buf_empty
 add wave -noupdate /tb_dct/zz_inst/output_buf_empty_comb
 add wave -noupdate /tb_dct/zz_inst/input_buf_full
@@ -51,7 +52,7 @@ add wave -noupdate /tb_dct/zz/tid
 add wave -noupdate /tb_dct/zz/tdest
 add wave -noupdate /tb_dct/zz/tuser
 TreeUpdate [SetDefaultTree]
-WaveRestoreCursors {{Cursor 1} {851536119 ps} 0}
+WaveRestoreCursors {{Cursor 1} {29165000 ps} 0}
 quietly wave cursor active 1
 configure wave -namecolwidth 477
 configure wave -valuecolwidth 454
@@ -67,4 +68,4 @@ configure wave -griddelta 40
 configure wave -timeline 0
 configure wave -timelineunits ns
 update
-WaveRestoreZoom {0 ps} {3189086250 ps}
+WaveRestoreZoom {29126075 ps} {29225563 ps}

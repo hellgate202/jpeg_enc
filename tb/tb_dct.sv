@@ -118,12 +118,20 @@ task automatic apply_rst();
 endtask
 
 real real_q [$];
+real ref_real_q [$];
+real max_error;
+real acc_error;
+real mean_error;
 
 task automatic recorder();
 
   bit [7 : 0]                        rx_bytes [$];
   bit [DCT_2D_Q_TDATA_WIDTH - 1 : 0] tdata;
   bit [DCT_2D_Q_WIDTH - 1 : 0]       dct;
+  real                               abs;
+  real                               ref_value;
+  real                               rx_value;
+  int                                pos;
   forever
     begin
       if( rx_data_mbx.num() > 0 )
@@ -136,6 +144,27 @@ task automatic recorder();
               dct = tdata;
               real_q.push_back( dct_to_real( dct ) );
             end
+          while( real_q.size() > 0 )
+            begin
+              ref_value = ref_real_q.pop_front();
+              rx_value  = real_q.pop_front();
+              if( ( ref_value - rx_value ) > 0 )
+                abs = ref_value - rx_value;
+              else
+                abs = -( ref_value - rx_value );
+              acc_error += abs;
+              if( abs > max_error )
+                max_error = abs;
+              if( ( abs > ACCURACY_THRESHOLD ) && CHECK_ACCURACY )
+                begin
+                  $display( "Error!" );
+                  $display( "Position #%0d: FPGA: %1.3f, Python %1.3f", pos, rx_value, ref_value );
+                  repeat( 2 )
+                    @( posedge clk );
+                  $stop();
+                end
+              pos++;
+            end
         end
       else
         @( posedge clk );
@@ -143,44 +172,19 @@ task automatic recorder();
 
 endtask
 
-real ref_real_q [$];
+task automatic read_file();
 
-task automatic check_data();
-
-  int fd = $fopen( "./ref.hex", "r" );
+  int fd;
   string line;
-  real abs;
-  real max_error;
-  real acc_error;
-  real mean_error;
+
+  fd = $fopen( "./ref.hex", "r" );
 
   while( !$feof( fd ) )
     begin
       $fgets( line, fd );
       ref_real_q.push_back( line.atoreal() );
     end
-  // Some EOF weired shit
   ref_real_q.pop_back();
-  for( int i = 0; i < ref_real_q.size(); i++ )
-    begin
-      if( ( ref_real_q[i] - real_q[i] ) > 0 )
-        abs = ref_real_q[i] - real_q[i];
-      else
-        abs = -( ref_real_q[i] - real_q[i] );
-      acc_error += abs;
-      if( abs > max_error )
-        max_error = abs;
-      if( ( abs > ACCURACY_THRESHOLD ) && CHECK_ACCURACY )
-        begin
-          $display( "Error!" );
-          $display( "Position #%0d: FPGA: %1.3f, Python %1.3f", i, real_q[i], ref_real_q[i] );
-          $stop();
-        end
-    end
-  mean_error = acc_error / ref_real_q.size();
-  $display( "Maximum error was %1.3f", max_error );
-  $display( "Mean error was %1.3f", mean_error );
-  $fclose( fd );
 
 endtask
 
@@ -222,6 +226,7 @@ initial
     video_sink   = new( .axi4_stream_if_v ( zz       ),
                         .rx_data_mbx      ( rx_data_mbx )  );
     fork
+      read_file();
       clk_gen();
       recorder();
     join_none
@@ -237,7 +242,6 @@ initial
       end
     repeat( 10 )
       @( posedge clk );
-    //check_data();
     $display( "Everything is fine." );
     $stop();
   end

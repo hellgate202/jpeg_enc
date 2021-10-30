@@ -18,6 +18,7 @@ logic [2 : 0]                     input_buf_cnt;
 logic [2 : 0]                     px_cnt;
 logic [5 : 0]                     output_cnt;
 logic                             load_input_buf;
+logic                             load_output_buf;
 logic                             output_buf_empty, output_buf_empty_comb;
 logic                             input_buf_full, input_buf_full_comb;
 logic                             tlast_lock;
@@ -25,7 +26,7 @@ logic                             tlast_buf;
 logic                             tuser_lock;
 logic                             tuser_buf;
 
-assign dct_i.tready = !( input_buf_full && !output_buf_empty );
+assign dct_i.tready = !input_buf_full || load_output_buf;
 
 always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
@@ -189,12 +190,13 @@ always_ff @( posedge clk_i, posedge rst_i )
           end
       endcase
 
+assign load_output_buf = ( output_buf_empty || output_cnt && zz_o.tready ) && input_buf_full;
+
 always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
     output_buf <= ( 64 * DCT_WIDTH )'( 0 );
   else
-    if( ( output_buf_empty || &output_cnt && zz_o.tready ) && 
-        ( input_buf_full || &px_cnt && &input_buf_cnt && dct_i.tvalid ) )
+    if( load_output_buf )
       output_buf <= zz_buf;
     else
       if( zz_o.tready )
@@ -219,7 +221,7 @@ always_ff @( posedge clk_i, posedge rst_i )
 always_comb
   begin
     output_buf_empty_comb = output_buf_empty;
-    if( input_buf_full || &px_cnt && &input_buf_cnt && dct_i.tvalid )
+    if( input_buf_full )
       output_buf_empty_comb = 1'b0;
     else
       if( &output_cnt && zz_o.tready )
@@ -235,11 +237,11 @@ always_ff @( posedge clk_i, posedge rst_i )
 always_comb
   begin
     input_buf_full_comb = input_buf_full;
-    if( output_buf_empty || &output_cnt && zz_o.tready )
-      input_buf_full_comb = 1'b0;
-    else
-      if( &px_cnt && &input_buf_cnt && dct_i.tvalid )
+    if( load_input_buf && &input_buf_cnt )
         input_buf_full_comb = 1'b1;
+    else
+      if( output_buf_empty || &output_cnt && zz_o.tready )
+        input_buf_full_comb = 1'b0;
   end
 
 assign zz_o.tdata  = DCT_TDATA_WIDTH'( output_buf[0] );

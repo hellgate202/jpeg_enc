@@ -121,6 +121,7 @@ real real_q [$];
 real ref_real_q [$];
 real max_error;
 real acc_error;
+int  pos;
 real mean_error;
 
 task automatic recorder();
@@ -131,7 +132,6 @@ task automatic recorder();
   real                               abs;
   real                               ref_value;
   real                               rx_value;
-  int                                pos;
   forever
     begin
       if( rx_data_mbx.num() > 0 )
@@ -242,6 +242,9 @@ initial
       end
     repeat( 10 )
       @( posedge clk );
+    mean_error = acc_error / pos;
+    $display( "Maximum error was %1.3f", max_error );
+    $display( "Mean error was %1.3f", mean_error );
     $display( "Everything is fine." );
     $stop();
   end
